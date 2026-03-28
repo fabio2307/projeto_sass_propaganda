@@ -156,6 +156,15 @@
 
         // ================= CLICK =================
 
+        let lastClick = 0;
+
+        function podeClicar() {
+            const agora = Date.now();
+            if (agora - lastClick < 3000) return false;
+            lastClick = agora;
+            return true;
+        }
+
         window.registrarClick = async function (id, link) {
             const { data } = await supabaseClient
                 .from("ads")
