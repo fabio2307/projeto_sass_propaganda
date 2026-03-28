@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ads SaaS</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <!-- LOGIN -->
+    <div id="auth" class="center-box">
+        <h2>Login / Cadastro</h2>
+
+        <input id="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Senha">
+
+        <button onclick="login()">Entrar</button>
+        <button onclick="register()">Cadastrar</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="app" class="hidden">
+
+        <div class="topbar">
+            <h2>📊 Dashboard</h2>
+            <button onclick="logout()">Sair</button>
+        </div>
+
+        <div class="grid">
+
+            <!-- Criar anúncio -->
+            <div class="card">
+                <h3>Criar anúncio</h3>
+
+                <input id="title" placeholder="Título">
+                <input id="image" placeholder="Imagem URL">
+                <input id="link" placeholder="Link">
+                <input id="bid" placeholder="Valor">
+
+                <button onclick="createAd()">Criar</button>
+            </div>
+
+            <!-- Gráfico -->
+            <div class="card">
+                <h3>📈 Performance</h3>
+                <canvas id="chart"></canvas>
+            </div>
+
+        </div>
+
+        <!-- Ads -->
+        <div class="ads" id="ads"></div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const supabaseClient = window.supabase.createClient(
+            "https://orrkygotkviidcgsdgxx.supabase.co"
+        );
+
+        // ================= AUTH =================
+
+        window.login = async function () {
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            });
+
+            if (error) return alert(error.message);
+
+            init();
+        };
+
+        window.register = async function () {
+            const { error } = await supabaseClient.auth.signUp({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            });
+
+            if (error) return alert(error.message);
+
+            alert("Conta criada!");
+        };
+
+        // ================= INIT =================
+
+        async function init() {
+            document.getElementById("auth").style.display = "none";
+            document.getElementById("app").classList.remove("hidden");
+
+            loadAds();
+        }
+
+        // ================= ADS =================
+
+        window.createAd = async function () {
+            const user = (await supabaseClient.auth.getUser()).data.user;
+
+            if (!user) return alert("Faça login!");
+
+            await supabaseClient.from("ads").insert([{
+                user_id: user.id,
+                title: title.value,
+                image: image.value,
+                link: link.value,
+                bid: parseFloat(bid.value),
+                views: 0,
+                clicks: 0,
+                score: 0
+            }]);
+
+            loadAds();
+        };
+
+        // ================= IA =================
+
+        function calcularScore(ad) {
+            if (ad.views === 0) return 0;
+            return (ad.clicks / ad.views) * 0.7 + (ad.bid * 0.3);
+        }
+
+        async function otimizarAds() {
+            const { data: ads } = await supabaseClient.from("ads").select("*");
+
+            for (const ad of ads) {
+                const score = calcularScore(ad);
+
+                let novoBid = ad.bid;
+
+                if (score > 0.5) novoBid *= 1.1;
+                else novoBid *= 0.9;
+
+                await supabaseClient.from("ads")
+                    .update({
+                        score: score,
+                        bid: parseFloat(novoBid.toFixed(2))
+                    })
+                    .eq("id", ad.id);
+            }
+        }
+
+        // ================= VIEW =================
+
+        async function registrarView(ad) {
+            await supabaseClient.from("ads")
+                .update({ views: ad.views + 1 })
+                .eq("id", ad.id);
+        }
+
+        // ================= CLICK =================
+
+        window.registrarClick = async function (id, link) {
+            const { data } = await supabaseClient
+                .from("ads")
+                .select("*")
+                .eq("id", id)
+                .single();
+
+            await supabaseClient.from("ads")
+                .update({ clicks: data.clicks + 1 })
+                .eq("id", id);
+
+            window.open(link, "_blank");
+        };
+
+        // ================= LOAD =================
+
+        async function loadAds() {
+            const { data } = await supabaseClient
+                .from("ads")
+                .select("*")
+                .order("score", { ascending: false });
+
+            const div = document.getElementById("ads");
+            div.innerHTML = "";
+
+            data.forEach(ad => {
+                registrarView(ad);
+
+                div.innerHTML += `
+      <div class="ad" onclick="registrarClick(${ad.id}, '${ad.link}')">
+        <img src="${ad.image}">
+        <h4>${ad.title}</h4>
+        <p>💰 R$ ${ad.bid}</p>
+      </div>
+    `;
+            });
+        }
+
+        // ================= AUTO IA =================
+
+        setInterval(otimizarAds, 10000);
+
+        // ================= AUTO LOGIN =================
+
+        supabaseClient.auth.getUser().then(({ data }) => {
+            if (data.user) init();
+        });
+    </script>
+
+</body>
+
+</html>

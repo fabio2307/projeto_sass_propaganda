@@ -1,0 +1,95 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: Arial;
+  background: #0f172a;
+  color: #fff;
+}
+
+/* CENTRAL LOGIN */
+.center-box {
+  width: 300px;
+  margin: 100px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* TOPO */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+}
+
+/* GRID */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* CARD */
+.card {
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+/* INPUT */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: none;
+  background: #334155;
+  color: white;
+}
+
+/* BOTÃO */
+button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+/* ADS */
+.ads {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+  gap: 15px;
+}
+
+.ad {
+  background: #020617;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.ad img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+/* HIDDEN */
+.hidden {
+  display: none;
+}
+
+/* RESPONSIVO */
+@media(max-width: 768px){
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
