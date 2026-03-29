@@ -1,4 +1,7 @@
 import { supabase } from "./lib/supabase";
+import { supabaseClient } from '../lib/supabase.js';
+
+window.supabaseClient = supabaseClient;
 
 const btnLogin = document.getElementById("btnLogin");
 const btnRegister = document.getElementById("btnRegister");
