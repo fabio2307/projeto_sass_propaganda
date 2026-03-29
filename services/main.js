@@ -1,8 +1,32 @@
-import { criarAd, listarAds } from "./services/adsService";
+import { supabase } from "./lib/supabase";
 
-async function init() {
-    const { data } = await listarAds();
-    console.log(data);
-}
+const btnLogin = document.getElementById("btnLogin");
+const btnRegister = document.getElementById("btnRegister");
 
-init();
+btnLogin.addEventListener("click", async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) return alert(error.message);
+
+    alert("Logado!");
+});
+
+btnRegister.addEventListener("click", async () => {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const { error } = await supabase.auth.signUp({
+        email,
+        password
+    });
+
+    if (error) return alert(error.message);
+
+    alert("Conta criada!");
+});

@@ -7,7 +7,9 @@
 
     <link rel="stylesheet" href="styles.css">
 
+    <!-- ORDEM IMPORTA -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="lib/supabase.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -34,7 +36,6 @@
 
         <div class="grid">
 
-            <!-- Criar anúncio -->
             <div class="card">
                 <h3>Criar anúncio</h3>
 
@@ -46,7 +47,6 @@
                 <button onclick="createAd()">Criar</button>
             </div>
 
-            <!-- Gráfico -->
             <div class="card">
                 <h3>📈 Performance</h3>
                 <canvas id="chart"></canvas>
@@ -54,19 +54,18 @@
 
         </div>
 
-        <!-- Ads -->
         <div class="ads" id="ads"></div>
 
     </div>
 
-    <script>       
+    <script>
 
         // ================= AUTH =================
 
         window.login = async function () {
             const { error } = await supabaseClient.auth.signInWithPassword({
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
+                email: email.value,
+                password: password.value
             });
 
             if (error) return alert(error.message);
@@ -76,13 +75,18 @@
 
         window.register = async function () {
             const { error } = await supabaseClient.auth.signUp({
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
+                email: email.value,
+                password: password.value
             });
 
             if (error) return alert(error.message);
 
             alert("Conta criada!");
+        };
+
+        window.logout = async function () {
+            await supabaseClient.auth.signOut();
+            location.reload();
         };
 
         // ================= INIT =================
@@ -97,7 +101,8 @@
         // ================= ADS =================
 
         window.createAd = async function () {
-            const user = (await supabaseClient.auth.getUser()).data.user;
+            const { data } = await supabaseClient.auth.getUser();
+            const user = data.user;
 
             if (!user) return alert("Faça login!");
 
@@ -124,6 +129,8 @@
 
         async function otimizarAds() {
             const { data: ads } = await supabaseClient.from("ads").select("*");
+
+            if (!ads) return;
 
             for (const ad of ads) {
                 const score = calcularScore(ad);
@@ -152,15 +159,6 @@
 
         // ================= CLICK =================
 
-        let lastClick = 0;
-
-        function podeClicar() {
-            const agora = Date.now();
-            if (agora - lastClick < 3000) return false;
-            lastClick = agora;
-            return true;
-        }
-
         window.registrarClick = async function (id, link) {
             const { data } = await supabaseClient
                 .from("ads")
@@ -186,28 +184,29 @@
             const div = document.getElementById("ads");
             div.innerHTML = "";
 
+            if (!data) return;
+
             data.forEach(ad => {
                 registrarView(ad);
 
                 div.innerHTML += `
-      <div class="ad" onclick="registrarClick(${ad.id}, '${ad.link}')">
-        <img src="${ad.image}">
-        <h4>${ad.title}</h4>
-        <p>💰 R$ ${ad.bid}</p>
-      </div>
-    `;
+                <div class="ad" onclick="registrarClick(${ad.id}, '${ad.link}')">
+                    <img src="${ad.image}">
+                    <h4>${ad.title}</h4>
+                    <p>💰 R$ ${ad.bid}</p>
+                </div>
+                `;
             });
         }
 
-        // ================= AUTO IA =================
+        // ================= AUTO =================
 
         setInterval(otimizarAds, 10000);
-
-        // ================= AUTO LOGIN =================
 
         supabaseClient.auth.getUser().then(({ data }) => {
             if (data.user) init();
         });
+
     </script>
 
 </body>
