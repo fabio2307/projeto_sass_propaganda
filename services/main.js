@@ -1,5 +1,4 @@
-import { supabase } from "./lib/supabase";
-import { supabaseClient } from '../lib/supabase.js';
+import { supabase } from "../lib/supabase.js";
 
 window.supabaseClient = supabaseClient;
 
