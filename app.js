@@ -5,6 +5,8 @@ async function login() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
+    console.log("ENVIANDO:", { email, password });
+
     const res = await fetch(`${API}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

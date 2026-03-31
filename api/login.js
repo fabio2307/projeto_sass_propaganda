@@ -14,15 +14,18 @@ export default async function handler(req, res) {
 
     const { email, password } = req.body || {};
 
-    if (!email || !password) {
+    const emailClean = email?.trim();
+    const passwordClean = password?.trim();
+
+    if (!emailClean || !passwordClean) {
         return res.status(400).json({ error: "Dados inválidos" });
     }
 
     const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("email", email)
-        .eq("password", password)
+        .eq("email", emailClean)
+        .eq("password", passwordClean)
         .single();
 
     if (error || !data) {
