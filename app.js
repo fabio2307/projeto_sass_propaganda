@@ -11,6 +11,13 @@ async function login() {
         body: JSON.stringify({ email, password })
     });
 
+    if (!res.ok) {
+        const text = await res.text();
+        console.error(text);
+        alert("Erro no servidor");
+        return;
+    }
+
     const data = await res.json();
 
     if (data.user) {
