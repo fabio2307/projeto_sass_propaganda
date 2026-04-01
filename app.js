@@ -20,7 +20,18 @@ async function login() {
         return;
     }
 
-    const data = await res.json();
+    const text = await res.text();
+    console.log("RESPOSTA API:", text);
+
+    let data;
+
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        console.error("Erro ao converter JSON:", text);
+        alert("Erro no servidor (getAds)");
+        return;
+    }
 
     if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
