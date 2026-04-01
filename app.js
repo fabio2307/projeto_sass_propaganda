@@ -70,19 +70,37 @@ function logout() {
 }
 
 async function carregarAds() {
-    const res = await fetch(`${API}/getAds`);
-    const ads = await res.json();
+    const res = await fetch("/api/getAds");
+
+    const text = await res.text();
+    console.log("ADS RAW:", text);
+
+    let ads;
+
+    try {
+        ads = JSON.parse(text);
+    } catch {
+        alert("Erro na API");
+        return;
+    }
+
+    console.log("ADS PARSED:", ads); // 👈 IMPORTANTE
+
+    if (!Array.isArray(ads)) {
+        alert("Erro ao carregar anúncios");
+        return;
+    }
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
     ads.forEach(ad => {
-        container.innerHTML += `
-      <div class="ad">
-        <img src="${ad.image}" />
-        <h4>${ad.title}</h4>
-      </div>
-    `;
+        const div = document.createElement("div");
+        div.innerHTML = `
+            <h3>${ad.title}</h3>
+            <p>${ad.description || ""}</p>
+        `;
+        container.appendChild(div);
     });
 }
 
