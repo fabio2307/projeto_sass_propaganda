@@ -1,11 +1,9 @@
 const API = window.location.origin + "/api";
-// depois no Vercel vira automático
 
+// LOGIN
 async function login() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
-
-    console.log("ENVIANDO:", { email, password });
 
     const res = await fetch(`${API}/login`, {
         method: "POST",
@@ -13,23 +11,14 @@ async function login() {
         body: JSON.stringify({ email, password })
     });
 
-    if (!res.ok) {
-        const text = await res.text();
-        console.error(text);
-        alert("Erro no servidor");
-        return;
-    }
-
     const text = await res.text();
-    console.log("RESPOSTA API:", text);
+    console.log("LOGIN RAW:", text);
 
     let data;
-
     try {
         data = JSON.parse(text);
-    } catch (e) {
-        console.error("Erro ao converter JSON:", text);
-        alert("Erro no servidor (getAds)");
+    } catch {
+        alert("Erro no servidor (login)");
         return;
     }
 
@@ -41,10 +30,11 @@ async function login() {
 
         carregarAds();
     } else {
-        alert("Erro no login");
+        alert(data.error || "Erro no login");
     }
 }
 
+// REGISTER
 async function register() {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
@@ -60,46 +50,80 @@ async function register() {
     if (data.user) {
         alert("Cadastro feito!");
     } else {
-        alert("Erro no cadastro");
+        alert(data.error || "Erro no cadastro");
     }
 }
 
+// LOGOUT
 function logout() {
     localStorage.removeItem("user");
     location.reload();
 }
 
+// CRIAR ANÚNCIO
+async function criarAd() {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    const ad = {
+        title: document.getElementById("title").value,
+        description: document.getElementById("description").value,
+        link: document.getElementById("link").value,
+        bid: Number(document.getElementById("bid").value),
+        user_id: user.id
+    };
+
+    const res = await fetch(`${API}/createAd`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ad)
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+        alert("Anúncio criado!");
+        carregarAds();
+    } else {
+        alert(data.error || "Erro ao criar anúncio");
+    }
+}
+
+// CARREGAR ADS
 async function carregarAds() {
-    const res = await fetch("/api/getAds");
+    const res = await fetch(`${API}/getAds`);
 
     const text = await res.text();
     console.log("ADS RAW:", text);
 
     let ads;
-
     try {
         ads = JSON.parse(text);
     } catch {
-        alert("Erro na API");
+        alert("Erro na API (ads)");
         return;
     }
 
-    console.log("ADS PARSED:", ads); // 👈 IMPORTANTE
-
-    if (!Array.isArray(ads)) {
-        alert("Erro ao carregar anúncios");
-        return;
-    }
+    console.log("ADS PARSED:", ads);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
+    // 🔥 TRATAMENTO CORRETO
+    if (!Array.isArray(ads) || ads.length === 0) {
+        container.innerHTML = "<p>Nenhum anúncio encontrado</p>";
+        return;
+    }
+
     ads.forEach(ad => {
         const div = document.createElement("div");
+        div.className = "ad-card";
+
         div.innerHTML = `
             <h3>${ad.title}</h3>
             <p>${ad.description || ""}</p>
+            <a href="${ad.link}" target="_blank">Acessar</a>
         `;
+
         container.appendChild(div);
     });
 }
