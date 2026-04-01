@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
+
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Método não permitido' });
     }
@@ -11,30 +12,38 @@ export default async function handler(req, res) {
     );
 
     try {
-        const { title, image, link, bid, user_id } = req.body;
+        const { title, description, link, bid, user_id } = req.body;
 
-        if (!title || !link || !user_id) {
-            return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+        console.log("BODY RECEBIDO:", req.body);
+
+        // ✅ validação mais completa
+        if (!title || !link) {
+            return res.status(400).json({ error: 'Título e link são obrigatórios' });
         }
 
-        const { error } = await supabase.from("ads").insert([{
-            user_id,
-            title,
-            image,
-            link,
-            bid: Number(bid) || 0,
-            views: 0,
-            clicks: 0,
-            score: 0
-        }]);
+        const { data, error } = await supabase
+            .from("ads")
+            .insert([{
+                title,
+                description: description || "",
+                link,
+                bid: Number(bid) || 0,
+                user_id: user_id || null,
+                views: 0,
+                clicks: 0,
+                score: 0
+            }])
+            .select();
 
         if (error) {
+            console.error("ERRO SUPABASE:", error);
             return res.status(400).json({ error: error.message });
         }
 
-        return res.status(200).json({ ok: true });
+        return res.status(200).json({ ok: true, ad: data });
 
     } catch (err) {
+        console.error("ERRO GERAL:", err);
         return res.status(500).json({ error: 'Erro interno' });
     }
 }

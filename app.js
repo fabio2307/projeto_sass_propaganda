@@ -69,22 +69,28 @@ async function criarAd() {
         description: document.getElementById("description").value,
         link: document.getElementById("link").value,
         bid: Number(document.getElementById("bid").value),
-        user_id: user.id
+        user_id: user?.id
     };
 
-    const res = await fetch(`${API}/createAd`, {
+    console.log("ENVIANDO AD:", ad);
+
+    const res = await fetch("/api/createAd", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify(ad)
     });
 
     const data = await res.json();
 
+    console.log("RESPOSTA:", data);
+
     if (data.ok) {
         alert("Anúncio criado!");
         carregarAds();
     } else {
-        alert(data.error || "Erro ao criar anúncio");
+        alert(data.error);
     }
 }
 
