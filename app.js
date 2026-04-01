@@ -96,25 +96,25 @@ async function criarAd() {
 
 // CARREGAR ADS
 async function carregarAds() {
-    const res = await fetch(`${API}/getAds`);
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    const res = await fetch(`/api/getAds?user_id=${user.id}`);
 
     const text = await res.text();
     console.log("ADS RAW:", text);
 
     let ads;
+
     try {
         ads = JSON.parse(text);
     } catch {
-        alert("Erro na API (ads)");
+        alert("Erro na API");
         return;
     }
-
-    console.log("ADS PARSED:", ads);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    // 🔥 TRATAMENTO CORRETO
     if (!Array.isArray(ads) || ads.length === 0) {
         container.innerHTML = "<p>Nenhum anúncio encontrado</p>";
         return;
@@ -122,12 +122,10 @@ async function carregarAds() {
 
     ads.forEach(ad => {
         const div = document.createElement("div");
-        div.className = "ad-card";
 
         div.innerHTML = `
             <h3>${ad.title}</h3>
             <p>${ad.description || ""}</p>
-            <a href="${ad.link}" target="_blank">Acessar</a>
         `;
 
         container.appendChild(div);
