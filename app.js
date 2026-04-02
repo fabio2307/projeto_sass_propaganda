@@ -122,6 +122,16 @@ async function carregarAds() {
     });
 }
 
+async function carregarFeed() {
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    const res = await fetch(`/api/getAds?user_id=${user.id}`);
+    const ads = await res.json();
+
+    renderAds(ads);
+}
+
 async function depositar(valor) {
     const res = await fetch("/api/deposit", {
         method: "POST",

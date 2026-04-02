@@ -9,7 +9,8 @@ export default async function handler(req, res) {
 
     const { data: ads, error } = await supabase
         .from("ads")
-        .select("*");
+        .select("*")
+        .neq("user_id", user_id);
 
     if (error) {
         return res.status(500).json({ error: error.message });
