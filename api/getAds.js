@@ -7,6 +7,12 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
 
+    const { user_id } = req.query;
+
+    if (!user_id) {
+        return res.status(400).json({ error: "user_id obrigatório" });
+    }
+
     const { data: ads, error } = await supabase
         .from("ads")
         .select("*")
@@ -23,7 +29,6 @@ export default async function handler(req, res) {
         return { ...ad, score };
     });
 
-    // 🔥 mistura + ordena (evita repetição)
     adsComScore.sort((a, b) => b.score - a.score);
 
     res.status(200).json(adsComScore);

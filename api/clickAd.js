@@ -13,35 +13,35 @@ export default async function handler(req, res) {
 
     const { ad_id } = req.body;
 
-    if (!ad_id) {
-        return res.status(400).json({ error: "ad_id obrigatório" });
-    }
-
-    // pega anúncio atual
-    const { data: ad, error: fetchError } = await supabase
+    const { data: ad } = await supabase
         .from("ads")
         .select("*")
         .eq("id", ad_id)
         .single();
 
-    if (fetchError || !ad) {
+    if (!ad) {
         return res.status(404).json({ error: "Ad não encontrado" });
     }
 
     const novoClicks = (ad.clicks || 0) + 1;
     const novoSpent = (ad.spent || 0) + ad.bid;
 
-    // 🔥 desconta do dono do anúncio
+    // 🔥 ATUALIZA O ANÚNCIO
+    await supabase
+        .from("ads")
+        .update({
+            clicks: novoClicks,
+            spent: novoSpent
+        })
+        .eq("id", ad_id);
+
+    // 🔥 DESCONTA SALDO
     await supabase
         .from("users")
         .update({
-            balance: supabase.raw(`balance - ${ad.bid}`)
+            balance: ad.bid * -1
         })
         .eq("id", ad.user_id);
-
-    if (error) {
-        return res.status(500).json({ error: error.message });
-    }
 
     res.status(200).json({ ok: true });
 }

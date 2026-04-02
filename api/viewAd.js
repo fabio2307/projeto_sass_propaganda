@@ -7,28 +7,41 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
 
-    const { ad_id } = req.body;
-
-    if (!ad_id) {
-        return res.status(400).json({ error: "ad_id obrigatório" });
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Método não permitido" });
     }
+
+    const { ad_id } = req.body;
 
     const { data: ad } = await supabase
         .from("ads")
-        .select("views")
+        .select("*")
         .eq("id", ad_id)
         .single();
 
-    const { error } = await supabase
+    if (!ad) {
+        return res.status(404).json({ error: "Ad não encontrado" });
+    }
+
+    const novoClicks = (ad.clicks || 0) + 1;
+    const novoSpent = (ad.spent || 0) + ad.bid;
+
+    // 🔥 ATUALIZA O ANÚNCIO
+    await supabase
         .from("ads")
         .update({
-            views: (ad.views || 0) + 1
+            clicks: novoClicks,
+            spent: novoSpent
         })
         .eq("id", ad_id);
 
-    if (error) {
-        return res.status(500).json({ error: error.message });
-    }
+    // 🔥 DESCONTA SALDO
+    await supabase
+        .from("users")
+        .update({
+            balance: ad.bid * -1
+        })
+        .eq("id", ad.user_id);
 
     res.status(200).json({ ok: true });
 }

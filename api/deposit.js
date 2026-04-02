@@ -17,8 +17,8 @@ export default async function handler(req, res) {
             quantity: 1,
         }],
         mode: 'payment',
-        success_url: 'https://seusite.com/sucesso',
-        cancel_url: 'https://seusite.com/cancelado',
+        success_url: 'https://projeto-sass-propaganda.vercel.app',
+        cancel_url: 'https://projeto-sass-propaganda.vercel.app',
     });
 
     res.json({ url: session.url });
