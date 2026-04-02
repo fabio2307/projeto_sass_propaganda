@@ -7,9 +7,7 @@ async function login() {
 
     const res = await fetch(`${API}/login`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
     });
 
@@ -31,9 +29,7 @@ async function register() {
 
     const res = await fetch(`${API}/register`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
     });
 
@@ -56,21 +52,22 @@ function logout() {
 async function criarAd() {
     const user = JSON.parse(localStorage.getItem("user"));
 
+    if (!user || !user.id) {
+        alert("Você precisa estar logado");
+        return;
+    }
+
     const ad = {
         title: document.getElementById("title").value,
         description: document.getElementById("description").value,
         link: document.getElementById("link").value,
         bid: Number(document.getElementById("bid").value),
-        user_id: user?.id
+        user_id: user.id
     };
 
-    console.log("ENVIANDO AD:", ad);
-
-    const res = await fetch("/api/createAd", {
+    const res = await fetch(`${API}/createAd`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ad)
     });
 
@@ -90,43 +87,36 @@ async function criarAd() {
 async function carregarAds() {
     const user = JSON.parse(localStorage.getItem("user"));
 
-    const res = await fetch(`/api/getAds?user_id=${user.id}`);
+    if (!user || !user.id) return;
 
-    const text = await res.text();
-    console.log("ADS RAW:", text);
+    const res = await fetch(`${API}/getAds?user_id=${user.id}`);
+    const data = await res.json();
 
-    let ads;
-
-    try {
-        ads = JSON.parse(text);
-    } catch {
-        alert("Erro na API");
-        return;
-    }
+    console.log("ADS:", data);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    if (!Array.isArray(ads) || ads.length === 0) {
+    if (!Array.isArray(data) || data.length === 0) {
         container.innerHTML = "<p>Nenhum anúncio encontrado</p>";
         return;
     }
 
-    aads.forEach(ad => {
+    data.forEach(ad => {
         const div = document.createElement("div");
         div.className = "ad-card";
 
         div.innerHTML = `
-    <h3>${ad.title}</h3>
-    <p>${ad.description || ""}</p>
-    <a href="${ad.link}" target="_blank">🔗 Acessar</a>
+            <h3>${ad.title}</h3>
+            <p>${ad.description || ""}</p>
+            <a href="${ad.link}" target="_blank">🔗 Acessar</a>
 
-    <div class="ad-metrics">
-        <span>👁 ${ad.views}</span>
-        <span>🖱 ${ad.clicks}</span>
-        <span>💰 ${ad.bid}</span>
-    </div>
-`;
+            <div class="ad-metrics">
+                <span>👁 ${ad.views || 0}</span>
+                <span>🖱 ${ad.clicks || 0}</span>
+                <span>💰 ${ad.bid}</span>
+            </div>
+        `;
 
         container.appendChild(div);
     });

@@ -33,7 +33,7 @@ export default async function handler(req, res) {
         .single();
 
     if (error) {
-        console.error("ERRO CREATE AD:", error);
+        console.error("CREATE AD ERROR:", error);
         return res.status(500).json({ error: error.message });
     }
 

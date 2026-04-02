@@ -17,10 +17,10 @@ export default async function handler(req, res) {
         .from("ads")
         .select("*")
         .eq("user_id", user_id)
-        .order("created_at", { ascending: false });
+        .order("id", { ascending: false });
 
     if (error) {
-        console.error("ERRO GET ADS:", error);
+        console.error("GET ADS ERROR:", error);
         return res.status(500).json({ error: error.message });
     }
 

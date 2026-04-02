@@ -1,4 +1,3 @@
-// /api/register.js
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -24,7 +23,9 @@ export default async function handler(req, res) {
         .select()
         .single();
 
-    if (error) return res.status(400).json({ error });
+    if (error) {
+        return res.status(400).json({ error: error.message });
+    }
 
     res.status(200).json({ user: data });
 }
