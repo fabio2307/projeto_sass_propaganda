@@ -7,22 +7,23 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
 
-    const { user_id } = req.query;
-
-    if (!user_id) {
-        return res.status(400).json({ error: "user_id obrigatório" });
-    }
-
-    const { data, error } = await supabase
+    const { data: ads, error } = await supabase
         .from("ads")
-        .select("*")
-        .eq("user_id", user_id)
-        .order("id", { ascending: false });
+        .select("*");
 
     if (error) {
-        console.error("GET ADS ERROR:", error);
         return res.status(500).json({ error: error.message });
     }
 
-    res.status(200).json(data);
+    const adsComScore = ads.map(ad => {
+        const ctr = ad.views > 0 ? ad.clicks / ad.views : 0;
+        const score = ad.bid * (1 + ctr);
+
+        return { ...ad, score };
+    });
+
+    // 🔥 mistura + ordena (evita repetição)
+    adsComScore.sort((a, b) => b.score - a.score);
+
+    res.status(200).json(adsComScore);
 }

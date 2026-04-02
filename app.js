@@ -109,16 +109,40 @@ async function carregarAds() {
         div.innerHTML = `
             <h3>${ad.title}</h3>
             <p>${ad.description || ""}</p>
-            <a href="${ad.link}" target="_blank">🔗 Acessar</a>
+            <a href="${ad.link}" target="_blank" onclick="registrarClique('${ad.id}')">🔗 Acessar</a>
 
             <div class="ad-metrics">
                 <span>👁 ${ad.views || 0}</span>
                 <span>🖱 ${ad.clicks || 0}</span>
-                <span>💰 ${ad.bid}</span>
+                <span>💰 R$ ${ad.spent || 0}</span>
             </div>
         `;
 
         container.appendChild(div);
+    });
+}
+
+async function depositar(valor) {
+    const res = await fetch("/api/deposit", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ amount: valor })
+    });
+
+    const data = await res.json();
+
+    window.location.href = data.url;
+}
+
+async function registrarClique(adId) {
+    await fetch("/api/clickAd", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ ad_id: adId })
     });
 }
 

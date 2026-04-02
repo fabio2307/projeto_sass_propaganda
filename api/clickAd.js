@@ -31,13 +31,13 @@ export default async function handler(req, res) {
     const novoClicks = (ad.clicks || 0) + 1;
     const novoSpent = (ad.spent || 0) + ad.bid;
 
-    const { error } = await supabase
-        .from("ads")
+    // 🔥 desconta do dono do anúncio
+    await supabase
+        .from("users")
         .update({
-            clicks: novoClicks,
-            spent: novoSpent
+            balance: supabase.raw(`balance - ${ad.bid}`)
         })
-        .eq("id", ad_id);
+        .eq("id", ad.user_id);
 
     if (error) {
         return res.status(500).json({ error: error.message });
