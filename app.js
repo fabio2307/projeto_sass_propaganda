@@ -7,28 +7,18 @@ async function login() {
 
     const res = await fetch(`${API}/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify({ email, password })
     });
 
-    const text = await res.text();
-    console.log("LOGIN RAW:", text);
-
-    let data;
-    try {
-        data = JSON.parse(text);
-    } catch {
-        alert("Erro no servidor (login)");
-        return;
-    }
+    const data = await res.json();
 
     if (data.user) {
         localStorage.setItem("user", JSON.stringify(data.user));
-
-        document.querySelector(".center-box").classList.add("hidden");
-        document.getElementById("dashboard").classList.remove("hidden");
-
-        carregarAds();
+        alert("Logado com sucesso!");
+        location.reload();
     } else {
         alert(data.error || "Erro no login");
     }
@@ -41,14 +31,16 @@ async function register() {
 
     const res = await fetch(`${API}/register`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json"
+        },
         body: JSON.stringify({ email, password })
     });
 
     const data = await res.json();
 
     if (data.user) {
-        alert("Cadastro feito!");
+        alert("Conta criada!");
     } else {
         alert(data.error || "Erro no cadastro");
     }
@@ -120,13 +112,21 @@ async function carregarAds() {
         return;
     }
 
-    ads.forEach(ad => {
+    aads.forEach(ad => {
         const div = document.createElement("div");
+        div.className = "ad-card";
 
         div.innerHTML = `
-            <h3>${ad.title}</h3>
-            <p>${ad.description || ""}</p>
-        `;
+    <h3>${ad.title}</h3>
+    <p>${ad.description || ""}</p>
+    <a href="${ad.link}" target="_blank">🔗 Acessar</a>
+
+    <div class="ad-metrics">
+        <span>👁 ${ad.views}</span>
+        <span>🖱 ${ad.clicks}</span>
+        <span>💰 ${ad.bid}</span>
+    </div>
+`;
 
         container.appendChild(div);
     });

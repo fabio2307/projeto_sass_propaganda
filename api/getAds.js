@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+if (!user_id || user_id === "undefined") {
+    return res.status(400).json({ error: "user_id inválido" });
+}
+
 export default async function handler(req, res) {
 
     const supabase = createClient(
@@ -31,4 +35,5 @@ export default async function handler(req, res) {
     } catch (err) {
         return res.status(500).json({ error: "Erro interno" });
     }
+
 }

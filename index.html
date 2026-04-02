@@ -27,20 +27,24 @@
             <button onclick="logout()">Sair</button>
         </div>
 
-        <!-- 🔥 FORMULÁRIO DE CRIAÇÃO -->
-        <div class="create-ad">
-            <h3>Criar Anúncio</h3>
+        <div class="dashboard-content">
 
-            <input id="title" placeholder="Título">
-            <input id="description" placeholder="Descrição">
-            <input id="link" placeholder="Link">
-            <input id="bid" placeholder="Valor do lance">
+            <!-- CRIAR ANÚNCIO -->
+            <div class="create-ad">
+                <h3>Criar Anúncio</h3>
 
-            <button onclick="criarAd()">Criar Anúncio</button>
+                <input id="title" placeholder="Título">
+                <input id="description" placeholder="Descrição">
+                <input id="link" placeholder="Link">
+                <input id="bid" placeholder="Valor do lance">
+
+                <button onclick="criarAd()">Criar</button>
+            </div>
+
+            <!-- LISTA -->
+            <div class="ads" id="ads"></div>
+
         </div>
-
-        <!-- LISTA DE ADS -->
-        <div class="ads" id="ads"></div>
 
     </div>
 
