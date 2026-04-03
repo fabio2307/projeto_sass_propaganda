@@ -21,103 +21,9 @@ body {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   padding: 15px 25px;
   background: #020617;
   border-bottom: 1px solid #1e293b;
-}
-
-/* DASHBOARD GRID */
-.dashboard-content {
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 20px;
-  padding: 20px;
-}
-
-/* FORM CRIAR ANÚNCIO */
-.create-ad {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* LISTA DE ADS */
-.ads {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 15px;
-}
-
-/* CARD DO ANÚNCIO */
-.ad-card {
-  background: #020617;
-  padding: 15px;
-  border-radius: 12px;
-  transition: 0.2s;
-  border: 1px solid #1e293b;
-}
-
-.ad-card:hover {
-  transform: scale(1.02);
-  border-color: #3b82f6;
-}
-
-/* TITULO */
-.ad-card h3 {
-  margin: 0 0 10px;
-}
-
-/* LINK */
-.ad-card a {
-  color: #3b82f6;
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.ad-card a:hover {
-  text-decoration: underline;
-}
-
-/* MÉTRICAS (já pronto pro futuro) */
-.ad-metrics {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #94a3b8;
-  display: flex;
-  justify-content: space-between;
-}
-
-/* INPUTS */
-input {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #0f172a;
-  color: white;
-}
-
-/* BOTÕES */
-button {
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #3b82f6;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-button:hover {
-  background: #2563eb;
-}
-
-/* ESCONDER */
-.hidden {
-  display: none;
 }
 
 /* STATS */
@@ -135,16 +41,38 @@ button:hover {
   border: 1px solid #1e293b;
 }
 
-.card span {
-  font-size: 12px;
-  color: #94a3b8;
+/* GRID */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  padding: 20px;
 }
 
-.card h3 {
-  margin: 5px 0 0;
+/* FORM */
+.create-ad {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-/* BOTÃO LINK */
+/* ADS */
+.ads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.ad-card {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+}
+
 .ad-card a {
   display: inline-block;
   margin-top: 8px;
@@ -152,5 +80,33 @@ button:hover {
   padding: 6px 10px;
   border-radius: 6px;
   color: white;
+  text-decoration: none;
+}
+
+.ad-metrics {
+  margin-top: 10px;
   font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+input {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #0f172a;
+  color: white;
+}
+
+button {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none;
 }

@@ -1,9 +1,9 @@
 const API = window.location.origin + "/api";
 
-// ================= LOGIN =================
+// LOGIN
 async function login() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+    const email = emailEl().value;
+    const password = passwordEl().value;
 
     const res = await fetch(`${API}/login`, {
         method: "POST",
@@ -16,50 +16,40 @@ async function login() {
     if (data.user && data.token) {
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("token", data.token);
-
-        alert("Logado!");
         location.reload();
     } else {
-        alert(data.error || "Erro no login");
+        alert(data.error);
     }
 }
 
-// ================= REGISTER =================
-async function register() {
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
+function emailEl() { return document.getElementById("email"); }
+function passwordEl() { return document.getElementById("password"); }
 
+// REGISTER
+async function register() {
     const res = await fetch(`${API}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+            email: emailEl().value,
+            password: passwordEl().value
+        })
     });
 
     const data = await res.json();
-
-    if (data.user) {
-        alert("Conta criada!");
-    } else {
-        alert(data.error || "Erro no cadastro");
-    }
+    alert(data.user ? "Conta criada!" : data.error);
 }
 
-// ================= LOGOUT =================
+// LOGOUT
 function logout() {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    localStorage.clear();
     location.reload();
 }
 
-// ================= CRIAR ANÚNCIO =================
+// CRIAR AD
 async function criarAd() {
 
     const token = localStorage.getItem("token");
-
-    if (!token) {
-        alert("Faça login primeiro");
-        return;
-    }
 
     const ad = {
         title: document.getElementById("title").value,
@@ -80,90 +70,67 @@ async function criarAd() {
     const data = await res.json();
 
     if (data.ok) {
-        alert("Anúncio criado!");
         carregarAds();
     } else {
-        alert(data.error || "Erro ao criar anúncio");
+        alert(data.error);
     }
 }
 
-// ================= CARREGAR ADS (CORRIGIDO) =================
+// CARREGAR ADS (SEM NULL ERROR)
 async function carregarAds() {
+
+    const container = document.getElementById("ads");
+    if (!container) return; // 🔥 evita erro
 
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!token || !user) return;
-
     const res = await fetch(`${API}/getAds`, {
-        headers: {
-            "Authorization": `Bearer ${token}`
-        }
+        headers: { "Authorization": `Bearer ${token}` }
     });
 
     const data = await res.json();
 
-    const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    let totalClicks = 0;
-    let totalViews = 0;
-
-    if (!data.length) {
-        container.innerHTML = "<p>Nenhum anúncio</p>";
-        return;
-    }
-
-    // 🔥 FILTRO CORRIGIDO (ESSENCIAL)
     const meusAds = data.filter(ad => ad.user_id === user.id);
+
+    let clicks = 0, views = 0;
 
     meusAds.forEach(ad => {
 
-        totalClicks += ad.clicks || 0;
-        totalViews += ad.views || 0;
+        clicks += ad.clicks || 0;
+        views += ad.views || 0;
 
         const div = document.createElement("div");
         div.className = "ad-card";
 
         div.innerHTML = `
             <h3>${ad.title}</h3>
-            <p>${ad.description || ""}</p>
+            <p>${ad.description}</p>
 
-            <a href="${ad.link}" target="_blank"
-               onclick="registrarClique('${ad.id}')">
-               🔗 Acessar produto
+            <a href="${ad.link}" target="_blank">
+                🔗 Ver produto
             </a>
 
             <div class="ad-metrics">
                 <span>👁 ${ad.views || 0}</span>
                 <span>🖱 ${ad.clicks || 0}</span>
-                <span>💰 R$ ${ad.bid}</span>
+                <span>💰 ${ad.bid}</span>
             </div>
         `;
 
         container.appendChild(div);
     });
 
-    // 🔥 ATUALIZA STATS
     document.getElementById("totalAds").innerText = meusAds.length;
-    document.getElementById("totalClicks").innerText = totalClicks;
-    document.getElementById("totalViews").innerText = totalViews;
+    document.getElementById("totalClicks").innerText = clicks;
+    document.getElementById("totalViews").innerText = views;
 }
 
-// ================= CLIQUE =================
-async function registrarClique(adId) {
-    await fetch(`${API}/clickAd`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ ad_id: adId })
-    });
-}
-
-// ================= AUTO LOGIN =================
+// AUTO LOGIN
 if (localStorage.getItem("user")) {
-    document.querySelector(".center-box").classList.add("hidden");
+    document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
     carregarAds();
 }
