@@ -1,5 +1,21 @@
 const API = window.location.origin + "/api";
 
+function clicarAd(id, url) {
+
+    const token = localStorage.getItem("token");
+
+    fetch(`${API}/clickAd`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ ad_id: id })
+    });
+
+    window.open(url, "_blank");
+}
+
 // LOGIN
 async function login() {
     const email = emailEl().value;
@@ -109,9 +125,9 @@ async function carregarAds() {
             <h3>${ad.title}</h3>
             <p>${ad.description}</p>
 
-            <a href="${ad.link}" target="_blank">
-                🔗 Ver produto
-            </a>
+            <button onclick="clicarAd('${ad.id}', '${ad.link}')">
+            🔗 Ver produto
+            </button>
 
             <div class="ad-metrics">
                 <span>👁 ${ad.views || 0}</span>

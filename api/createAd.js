@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
 
+    if (req.method !== "POST") {
+        return res.status(405).json({ error: "Método não permitido" });
+    }
+
     const token = req.headers.authorization?.replace("Bearer ", "");
 
     const supabase = createClient(
@@ -9,9 +13,7 @@ export default async function handler(req, res) {
         process.env.SUPABASE_ANON_KEY,
         {
             global: {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` }
             }
         }
     );
@@ -35,7 +37,8 @@ export default async function handler(req, res) {
             bid,
             user_id: user.id,
             views: 0,
-            clicks: 0
+            clicks: 0,
+            spent: 0
         }])
         .select()
         .single();

@@ -15,13 +15,19 @@ export default async function handler(req, res) {
 
     const { data: ads, error } = await supabase
         .from("ads")
-        .select("*")
-        .neq("user_id", user_id);
+        .select(`
+      *,
+      users(balance)
+    `)
+        .neq("user_id", user_id)
+        .order("bid", { ascending: false })
+        .limit(50);
 
     if (error) {
         return res.status(500).json({ error: error.message });
     }
 
+    // 🔥 score simples (bid + CTR)
     const adsComScore = ads.map(ad => {
         const ctr = ad.views > 0 ? ad.clicks / ad.views : 0;
         const score = ad.bid * (1 + ctr);
@@ -29,7 +35,11 @@ export default async function handler(req, res) {
         return { ...ad, score };
     });
 
-    adsComScore.sort((a, b) => b.score - a.score);
+    // 🔥 filtrar + ordenar + limitar
+    const feed = adsComScore
+        .filter(ad => ad.users?.balance >= ad.bid)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
 
-    res.status(200).json(adsComScore);
+    res.status(200).json(feed);
 }
