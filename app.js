@@ -82,6 +82,91 @@ async function criarAd() {
 }
 
 // CARREGAR ADS
+const API = window.location.origin + "/api";
+
+// LOGIN
+async function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const res = await fetch(`${API}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    localStorage.setItem("token", data.token);
+    alert("Logado!");
+    location.reload();
+}
+
+// REGISTER
+async function register() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    const res = await fetch(`${API}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    alert("Conta criada!");
+}
+
+// LOGOUT
+function logout() {
+    localStorage.removeItem("token");
+    location.reload();
+}
+
+// CRIAR AD
+async function criarAd() {
+
+    const token = localStorage.getItem("token");
+
+    const ad = {
+        title: document.getElementById("title").value,
+        description: document.getElementById("description").value,
+        link: document.getElementById("link").value,
+        bid: Number(document.getElementById("bid").value)
+    };
+
+    const res = await fetch(`${API}/createAd`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(ad)
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+        alert(data.error);
+        return;
+    }
+
+    alert("Anúncio criado!");
+    carregarAds();
+}
+
+// CARREGAR ADS
 async function carregarAds() {
 
     const token = localStorage.getItem("token");
@@ -97,21 +182,45 @@ async function carregarAds() {
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    if (!data.length) {
-        container.innerHTML = "<p>Nenhum anúncio</p>";
-        return;
-    }
+    let totalClicks = 0;
+    let totalViews = 0;
 
     data.forEach(ad => {
+
+        totalClicks += ad.clicks || 0;
+        totalViews += ad.views || 0;
+
         const div = document.createElement("div");
+        div.className = "ad-card";
 
         div.innerHTML = `
             <h3>${ad.title}</h3>
-            <p>${ad.description}</p>
+            <p>${ad.description || ""}</p>
+
+            <a href="${ad.link}" target="_blank">
+                🔗 Visitar anúncio
+            </a>
+
+            <div class="ad-metrics">
+                <span>👁 ${ad.views || 0}</span>
+                <span>🖱 ${ad.clicks || 0}</span>
+                <span class="bid">💰 R$ ${ad.bid}</span>
+            </div>
         `;
 
         container.appendChild(div);
     });
+
+    document.getElementById("totalAds").innerText = data.length;
+    document.getElementById("totalClicks").innerText = totalClicks;
+    document.getElementById("totalViews").innerText = totalViews;
+}
+
+// AUTO LOGIN
+if (localStorage.getItem("token")) {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    carregarAds();
 }
 
 async function carregarFeed() {
