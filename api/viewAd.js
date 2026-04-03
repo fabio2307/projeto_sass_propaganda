@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     await supabase
         .from("users")
         .update({
-            balance: ad.bid * -1
+            balance: dono.balance - ad.bid
         })
         .eq("id", ad.user_id);
 
