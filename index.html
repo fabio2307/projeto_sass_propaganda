@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <title>Ads SaaS</title>
@@ -8,25 +9,25 @@
 
 <body>
 
-<!-- LOGIN -->
-<div class="center-box" id="loginBox">
-    <h2>Login</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Senha">
+    <!-- LOGIN -->
+    <div class="center-box">
+        <h2>Login</h2>
+        <input id="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Senha">
 
-    <button onclick="login()">Entrar</button>
-    <button onclick="register()">Cadastrar</button>
-</div>
+        <button onclick="login()">Entrar</button>
+        <button onclick="register()">Cadastrar</button>
+    </div>
 
-<!-- DASHBOARD -->
+    <!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
 
     <div class="topbar">
-        <h2>📊 Ads Dashboard</h2>
+        <h2>Dashboard</h2>
         <button onclick="logout()">Sair</button>
     </div>
 
-    <!-- STATS -->
+    <!-- 🔥 STATS -->
     <div class="stats">
         <div class="card">
             <span>Total Ads</span>
@@ -39,32 +40,13 @@
         </div>
 
         <div class="card">
-            <span>Visualizações</span>
+            <span>Views</span>
             <h3 id="totalViews">0</h3>
         </div>
     </div>
 
-    <div class="dashboard-content">
+    <script src="./app.js"></script>
 
-        <!-- CRIAR ANÚNCIO -->
-        <div class="create-ad">
-            <h3>Criar Anúncio</h3>
-
-            <input id="title" placeholder="Título">
-            <input id="description" placeholder="Descrição">
-            <input id="link" placeholder="Link (https://...)">
-            <input id="bid" placeholder="Valor do lance">
-
-            <button onclick="criarAd()">Criar</button>
-        </div>
-
-        <!-- LISTA -->
-        <div class="ads" id="ads"></div>
-
-    </div>
-
-</div>
-
-<script src="./app.js"></script>
 </body>
+
 </html>
