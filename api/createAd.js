@@ -11,7 +11,8 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: "Método não permitido" });
     }
 
-    const { title, description, link, bid, user_id } = req.body;
+    const { title, description, link, bid } = req.body;
+    const user_id = req.headers["x-user-id"]; // ID do usuário vindo do header
 
     if (!title || !link || !user_id) {
         return res.status(400).json({ error: "Dados inválidos" });

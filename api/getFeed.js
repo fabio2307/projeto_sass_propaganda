@@ -13,15 +13,23 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "user_id obrigatório" });
     }
 
-    const { data, error } = await supabase
+    const { data: ads, error } = await supabase
         .from("ads")
         .select("*")
-        .eq("user_id", user_id)
-        .order("id", { ascending: false });
+        .neq("user_id", user_id);
 
     if (error) {
         return res.status(500).json({ error: error.message });
     }
 
-    res.status(200).json(data);
+    const adsComScore = ads.map(ad => {
+        const ctr = ad.views > 0 ? ad.clicks / ad.views : 0;
+        const score = ad.bid * (1 + ctr);
+
+        return { ...ad, score };
+    });
+
+    adsComScore.sort((a, b) => b.score - a.score);
+
+    res.status(200).json(adsComScore);
 }
