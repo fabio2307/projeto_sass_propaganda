@@ -13,12 +13,14 @@ async function login() {
 
     const data = await res.json();
 
-    if (data.user) {
+    if (data.user && data.token) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        alert("Logado com sucesso!");
+        localStorage.setItem("token", data.token);
+
+        alert("Logado!");
         location.reload();
     } else {
-        alert(data.error || "Erro no login");
+        alert(data.error);
     }
 }
 
@@ -50,30 +52,26 @@ function logout() {
 
 // CRIAR ANÚNCIO
 async function criarAd() {
-    const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!user || !user.id) {
-        alert("Você precisa estar logado");
-        return;
-    }
+    const token = localStorage.getItem("token");
 
     const ad = {
         title: document.getElementById("title").value,
         description: document.getElementById("description").value,
         link: document.getElementById("link").value,
-        bid: Number(document.getElementById("bid").value),
-        user_id: user.id
+        bid: Number(document.getElementById("bid").value)
     };
 
     const res = await fetch(`${API}/createAd`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify(ad)
     });
 
     const data = await res.json();
-
-    console.log("RESPOSTA:", data);
 
     if (data.ok) {
         alert("Anúncio criado!");
@@ -85,37 +83,31 @@ async function criarAd() {
 
 // CARREGAR ADS
 async function carregarAds() {
-    const user = JSON.parse(localStorage.getItem("user"));
 
-    if (!user || !user.id) return;
+    const token = localStorage.getItem("token");
 
-    const res = await fetch(`${API}/getAds?user_id=${user.id}`);
+    const res = await fetch(`${API}/getAds`, {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+
     const data = await res.json();
-
-    console.log("ADS:", data);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    if (!Array.isArray(data) || data.length === 0) {
-        container.innerHTML = "<p>Nenhum anúncio encontrado</p>";
+    if (!data.length) {
+        container.innerHTML = "<p>Nenhum anúncio</p>";
         return;
     }
 
     data.forEach(ad => {
         const div = document.createElement("div");
-        div.className = "ad-card";
 
         div.innerHTML = `
             <h3>${ad.title}</h3>
-            <p>${ad.description || ""}</p>
-            <a href="${ad.link}" target="_blank" onclick="registrarClique('${ad.id}')">🔗 Acessar</a>
-
-            <div class="ad-metrics">
-                <span>👁 ${ad.views || 0}</span>
-                <span>🖱 ${ad.clicks || 0}</span>
-                <span>💰 R$ ${ad.spent || 0}</span>
-            </div>
+            <p>${ad.description}</p>
         `;
 
         container.appendChild(div);
@@ -132,6 +124,7 @@ async function carregarFeed() {
     renderAds(ads);
 }
 
+// DEPOSITAR
 async function depositar(valor) {
     const res = await fetch("/api/deposit", {
         method: "POST",

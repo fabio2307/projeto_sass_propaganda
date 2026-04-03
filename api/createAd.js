@@ -1,21 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export default async function handler(req, res) {
 
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "Método não permitido" });
-    }
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    const supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY,
+        {
+            global: {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        }
+    );
 
     const { title, description, link, bid } = req.body;
-    const user_id = req.headers["x-user-id"]; // ID do usuário vindo do header
 
-    if (!title || !link || !user_id) {
-        return res.status(400).json({ error: "Dados inválidos" });
+    const {
+        data: { user }
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+        return res.status(401).json({ error: "Não autenticado" });
     }
 
     const { data, error } = await supabase
@@ -25,16 +33,14 @@ export default async function handler(req, res) {
             description,
             link,
             bid,
-            user_id,
+            user_id: user.id,
             views: 0,
-            clicks: 0,
-            score: 0
+            clicks: 0
         }])
         .select()
         .single();
 
     if (error) {
-        console.error("CREATE AD ERROR:", error);
         return res.status(500).json({ error: error.message });
     }
 
