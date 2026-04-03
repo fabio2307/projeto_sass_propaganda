@@ -18,17 +18,37 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: "Não autorizado" });
         }
 
-        const user = parseJwt(token); // implemente isso
+        const supabaseAuth = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY,
+            {
+                global: {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            }
+        );
+
+        const {
+            data: { user },
+            error: userError
+        } = await supabaseAuth.auth.getUser();
+
+        if (userError || !user) {
+            return res.status(401).json({ error: "Token inválido" });
+        }
+
         const { ad_id } = req.body;
 
         // 🔎 Buscar anúncio
-        const { data: ad } = await supabase
+        const { data: ad, error: adError } = await supabase
             .from("ads")
             .select("*")
             .eq("id", ad_id)
             .single();
 
-        if (!ad) {
+        if (adError || !ad) {
             return res.status(404).json({ error: "Ad não encontrado" });
         }
 
