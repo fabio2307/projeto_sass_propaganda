@@ -30,9 +30,15 @@ export default async function handler(req, res) {
     // 🔥 score simples (bid + CTR)
     const adsComScore = ads.map(ad => {
         const ctr = ad.views > 0 ? ad.clicks / ad.views : 0;
-        const score = ad.bid * (1 + ctr);
 
-        return { ...ad, score };
+        // 🎯 Score balanceado (mais estável pra escalar)
+        const score = (ctr * 0.6) + (ad.bid * 0.4);
+
+        return {
+            ...ad,
+            ctr,
+            score
+        };
     });
 
     // 🔥 filtrar + ordenar + limitar

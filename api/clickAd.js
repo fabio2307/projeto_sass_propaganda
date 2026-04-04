@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit } from '../lib/rateLimit.js';
 
 export default async function handler(req, res) {
 
@@ -8,7 +9,18 @@ export default async function handler(req, res) {
 
     try {
 
+        const ip =
+            req.headers['x-forwarded-for'] ||
+            req.socket.remoteAddress ||
+            'unknown';
+
+        // 🚫 rate limit
+        if (!checkRateLimit(ip)) {
+            return res.status(429).json({ error: "Muitos cliques, aguarde" });
+        }
+
         const token = req.headers.authorization?.split(" ")[1];
+
         if (!token) {
             return res.status(401).json({ error: "Não autorizado" });
         }
@@ -18,71 +30,39 @@ export default async function handler(req, res) {
             process.env.SUPABASE_ANON_KEY,
             {
                 global: {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    headers: { Authorization: `Bearer ${token}` }
                 }
             }
         );
 
-        const {
-            data: { user },
-            error: userError
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-            return res.status(401).json({ error: "Token inválido" });
+        if (!user) {
+            return res.status(401).json({ error: "Usuário inválido" });
         }
 
         const { ad_id } = req.body;
 
-        const { data: ad, error: adError } = await supabase
-            .from("ads")
-            .select("*")
-            .eq("id", ad_id)
-            .single();
-
-        if (adError || !ad) {
-            return res.status(404).json({ error: "Ad não encontrado" });
+        if (!ad_id) {
+            return res.status(400).json({ error: "ad_id obrigatório" });
         }
 
-        if (ad.user_id === user.id) {
-            return res.status(400).json({ error: "Ação inválida" });
-        }
-
-        const { data: dono } = await supabase
-            .from("users")
-            .select("balance")
-            .eq("id", ad.user_id)
-            .single();
-
-        if (!dono || dono.balance < ad.bid) {
-            return res.status(400).json({ error: "Saldo insuficiente" });
-        }
-
-        await supabase
-            .from("users")
-            .update({ balance: dono.balance - ad.bid })
-            .eq("id", ad.user_id);
-
-        await supabase
-            .from("ads")
-            .update({
-                clicks: (ad.clicks || 0) + 1,
-                spent: (ad.spent || 0) + ad.bid
-            })
-            .eq("id", ad_id);
-
-        await supabase.from("transactions").insert({
-            user_id: ad.user_id,
-            amount: -ad.bid,
-            type: "click"
+        // 🚀 CHAMADA PROFISSIONAL (TUDO NO BANCO)
+        const { data, error } = await supabase.rpc("process_click", {
+            p_ad_id: ad_id,
+            p_ip: ip,
+            p_user_id: user.id
         });
 
-        res.status(200).json({ success: true });
+        if (error) {
+            console.error(error);
+            return res.status(500).json({ error: "Erro no clique" });
+        }
+
+        return res.status(200).json(data);
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Erro interno" });
+        return res.status(500).json({ error: "Erro interno" });
     }
 }
