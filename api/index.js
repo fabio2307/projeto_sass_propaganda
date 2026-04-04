@@ -1,7 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY
+    ? new Stripe(process.env.STRIPE_SECRET_KEY)
+    : null;
 
 // ================= HELPER =================
 
@@ -80,21 +82,34 @@ async function register(req, res) {
 
 async function login(req, res) {
 
-    const { email, password } = req.body;
+    try {
 
-    const supabase = getSupabase();
+        const { email, password } = req.body || {};
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
+        if (!email || !password) {
+            return res.status(400).json({ error: "Dados inválidos" });
+        }
 
-    if (error) return res.status(400).json({ error: error.message });
+        const supabase = getSupabase();
 
-    res.json({
-        user: data.user,
-        token: data.session.access_token
-    });
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+
+        if (error) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        res.json({
+            user: data.user,
+            token: data.session.access_token
+        });
+
+    } catch (err) {
+        console.error("ERRO LOGIN:", err);
+        res.status(500).json({ error: "Erro no login" });
+    }
 }
 
 // ================= USER =================
