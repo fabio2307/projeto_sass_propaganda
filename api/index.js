@@ -29,35 +29,44 @@ export default async function handler(req, res) {
 
     try {
 
-        switch (action) {
+        if (action === "login") {
 
-            case "register":
-                return register(req, res);
+            const { email, password } = req.body || {};
 
-            case "login":
-                return login(req, res);
+            const supabase = getSupabase();
 
-            case "getUser":
-                return getUser(req, res);
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password
+            });
 
-            case "createAd":
-                return createAd(req, res);
+            if (error) return res.status(400).json({ error: error.message });
 
-            case "myAds":
-                return myAds(req, res);
-
-            case "clickAd":
-                return clickAd(req, res);
-
-            case "createCheckout":
-                return createCheckout(req, res);
-
-            default:
-                return res.status(400).json({ error: "Ação inválida" });
+            return res.json({
+                token: data.session.access_token
+            });
         }
 
+        if (action === "register") {
+
+            const { email, password } = req.body;
+
+            const supabase = getSupabase();
+
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password
+            });
+
+            if (error) return res.status(400).json({ error: error.message });
+
+            return res.json({ ok: true });
+        }
+
+        return res.status(400).json({ error: "Ação inválida" });
+
     } catch (err) {
-        console.error(err);
+        console.error("ERRO API:", err);
         res.status(500).json({ error: "Erro interno" });
     }
 }
