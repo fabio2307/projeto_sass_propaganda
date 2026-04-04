@@ -3,11 +3,17 @@ const API = window.location.origin + "/api";
 // ================= SAFE JSON =================
 async function safeJson(res) {
     const text = await res.text();
+
+    if (!res.ok) {
+        console.error("Erro API:", text);
+        throw new Error(text);
+    }
+
     try {
         return JSON.parse(text);
     } catch {
         console.error("Resposta inválida:", text);
-        throw new Error("Erro na API");
+        throw new Error("Resposta inválida");
     }
 }
 
