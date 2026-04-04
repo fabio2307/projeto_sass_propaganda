@@ -1,5 +1,16 @@
 const API = window.location.origin + "/api";
 
+// ================= SAFE JSON =================
+async function safeJson(res) {
+    const text = await res.text();
+    try {
+        return JSON.parse(text);
+    } catch {
+        console.error("Resposta inválida:", text);
+        throw new Error("Erro na API");
+    }
+}
+
 // ================= TOKEN =================
 
 function getToken() {
@@ -19,16 +30,16 @@ function logout() {
 
 async function login() {
 
-    const email = document.getElementById("email").value;
-    const password = document.getElementById("password").value;
-
-    const res = await fetch(`${API}/login`, {
+    const res = await fetch(`${API}?action=login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+        })
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
 
     if (data.token) {
         setToken(data.token);
@@ -40,7 +51,7 @@ async function login() {
 
 async function register() {
 
-    const res = await fetch(`${API}/register`, {
+    const res = await fetch(`${API}?action=register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -49,7 +60,13 @@ async function register() {
         })
     });
 
-    alert("Conta criada! Faça login.");
+    const data = await safeJson(res);
+
+    if (data.error) {
+        alert(data.error);
+    } else {
+        alert("Conta criada! Faça login.");
+    }
 }
 
 // ================= INIT =================
@@ -67,13 +84,14 @@ async function init() {
 
 async function carregarSaldo() {
 
-    const res = await fetch(`${API}/getUser`, {
+    const res = await fetch(`${API}?action=getUser`, {
         headers: {
             Authorization: "Bearer " + getToken()
         }
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
+
     document.getElementById("saldo").innerText = data.balance || 0;
 }
 
@@ -88,7 +106,7 @@ async function pagar() {
         return;
     }
 
-    const res = await fetch(`${API}/createCheckout`, {
+    const res = await fetch(`${API}?action=createCheckout`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -97,12 +115,12 @@ async function pagar() {
         body: JSON.stringify({ amount: Number(valor) })
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
 
     if (data.url) {
         window.location.href = data.url;
     } else {
-        alert("Erro ao iniciar pagamento");
+        alert(data.error || "Erro ao iniciar pagamento");
     }
 }
 
@@ -110,7 +128,7 @@ async function pagar() {
 
 async function criarAd() {
 
-    const res = await fetch(`${API}/createAd`, {
+    const res = await fetch(`${API}?action=createAd`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -124,7 +142,7 @@ async function criarAd() {
         })
     });
 
-    const data = await res.json();
+    const data = await safeJson(res);
 
     if (data.ok) {
         alert("Anúncio criado!");
@@ -138,7 +156,7 @@ async function criarAd() {
 
 function clicarAd(id, url) {
 
-    fetch(`${API}/clickAd`, {
+    fetch(`${API}?action=clickAd`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -154,13 +172,13 @@ function clicarAd(id, url) {
 
 async function carregarAds() {
 
-    const res = await fetch(`${API}/myAds`, {
+    const res = await fetch(`${API}?action=myAds`, {
         headers: {
             Authorization: "Bearer " + getToken()
         }
     });
 
-    const ads = await res.json();
+    const ads = await safeJson(res);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
