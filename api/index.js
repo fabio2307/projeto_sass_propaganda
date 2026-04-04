@@ -68,14 +68,9 @@ async function register(req, res) {
 
     const supabase = getSupabase();
 
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-    });
+    const { data, error } = await supabase.auth.signUp({ email, password });
 
-    if (error) {
-        return res.status(400).json({ error: error.message });
-    }
+    if (error) return res.status(400).json({ error: error.message });
 
     res.json({
         user: data.user,
@@ -94,9 +89,7 @@ async function login(req, res) {
         password
     });
 
-    if (error) {
-        return res.status(400).json({ error: error.message });
-    }
+    if (error) return res.status(400).json({ error: error.message });
 
     res.json({
         user: data.user,
@@ -109,24 +102,17 @@ async function login(req, res) {
 async function getUser(req, res) {
 
     const token = req.headers.authorization?.replace("Bearer ", "");
-
     const supabase = getSupabase(token);
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        return res.status(401).json({ error: "Usuário inválido" });
-    }
+    if (!user) return res.status(401).json({ error: "Usuário inválido" });
 
-    const { data, error } = await supabase
+    const { data } = await supabase
         .from("users")
         .select("balance")
         .eq("id", user.id)
         .single();
-
-    if (error) {
-        return res.status(500).json({ error: error.message });
-    }
 
     res.json(data);
 }
@@ -136,18 +122,11 @@ async function getUser(req, res) {
 async function createAd(req, res) {
 
     const token = req.headers.authorization?.replace("Bearer ", "");
-
     const supabase = getSupabase(token);
 
     const { title, description, link, bid } = req.body;
 
-    if (!title || !link || !bid) {
-        return res.status(400).json({ error: "Campos obrigatórios" });
-    }
-
-    const {
-        data: { user }
-    } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     const { data, error } = await supabase
         .from("ads")
@@ -163,9 +142,7 @@ async function createAd(req, res) {
         .select()
         .single();
 
-    if (error) {
-        return res.status(500).json({ error: error.message });
-    }
+    if (error) return res.status(500).json({ error: error.message });
 
     res.json({ ok: true, ad: data });
 }
@@ -173,68 +150,13 @@ async function createAd(req, res) {
 async function myAds(req, res) {
 
     const token = req.headers.authorization?.replace("Bearer ", "");
-
     const supabase = getSupabase(token);
 
-    const { data, error } = await supabase
+    const { data } = await supabase
         .from("ads")
         .select("*");
 
-    if (error) {
-        return res.status(500).json({ error: error.message });
-    }
-
     res.json(data);
-}
-
-// ================= CLICK =================
-
-async function clickAd(req, res) {
-
-    const token = req.headers.authorization?.replace("Bearer ", "");
-    const supabase = getSupabase(token);
-
-    const { ad_id } = req.body;
-
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { data: ad } = await supabase
-        .from("ads")
-        .select("*")
-        .eq("id", ad_id)
-        .single();
-
-    if (ad.user_id === user.id) {
-        return res.status(400).json({ error: "Ação inválida" });
-    }
-
-    const { data: dono } = await supabase
-        .from("users")
-        .select("balance")
-        .eq("id", ad.user_id)
-        .single();
-
-    if (dono.balance < ad.bid) {
-        return res.status(400).json({ error: "Saldo insuficiente" });
-    }
-
-    await supabase
-        .from("users")
-        .update({ balance: dono.balance - ad.bid })
-        .eq("id", ad.user_id);
-
-    await supabase
-        .from("ads")
-        .update({ clicks: ad.clicks + 1 })
-        .eq("id", ad_id);
-
-    await supabase.from("transactions").insert({
-        user_id: ad.user_id,
-        amount: -ad.bid,
-        type: "click"
-    });
-
-    res.json({ success: true });
 }
 
 // ================= PAGAMENTO =================
@@ -242,12 +164,11 @@ async function clickAd(req, res) {
 async function createCheckout(req, res) {
 
     const token = req.headers.authorization?.replace("Bearer ", "");
+    const supabase = getSupabase(token);
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     const { amount } = req.body;
-
-    if (!amount || amount <= 0) {
-        return res.status(400).json({ error: "Valor inválido" });
-    }
 
     const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -261,9 +182,9 @@ async function createCheckout(req, res) {
         }],
         mode: 'payment',
 
-        // 🔥 IMPORTANTE
+        // ✅ CORRETO
         metadata: {
-            user_id: token
+            user_id: user.id
         },
 
         success_url: process.env.BASE_URL,
