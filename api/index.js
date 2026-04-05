@@ -73,6 +73,12 @@ export default async function handler(req, res) {
 
             const token = req.headers.authorization?.split(" ")[1];
 
+            const { data: { user } } = await supabase.auth.getUser(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
             if (!token) return res.status(401).json({ error: "Sem token" });
 
             const { data } = await supabase
@@ -89,21 +95,56 @@ export default async function handler(req, res) {
 
             const token = req.headers.authorization?.split(" ")[1];
 
-            if (!token) return res.status(401).json({ error: "Sem token" });
+            if (!token) {
+                return res.status(401).json({ error: "Sem token" });
+            }
+
+            // 🔐 pegar usuário real via JWT
+            const { data: { user } } = await supabase.auth.getUser(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            // 🧠 buscar plano do usuário
+            const { data: dbUser } = await supabase
+                .from("users")
+                .select("plan")
+                .eq("id", user.id)
+                .single();
+
+            // 🚫 limitar plano FREE
+            if (dbUser?.plan === "free") {
+
+                const { count } = await supabase
+                    .from("ads")
+                    .select("*", { count: "exact", head: true })
+                    .eq("user_id", user.id);
+
+                if (count >= 5) {
+                    return res.status(403).json({
+                        error: "Limite do plano gratuito atingido (máx 5 anúncios)"
+                    });
+                }
+            }
 
             const { title, description, link, bid } = req.body;
 
+            // 💾 criar anúncio
             const { error } = await supabase
                 .from("ads")
                 .insert([{
-                    user_id: token,
+                    user_id: user.id, // ✅ agora correto
                     title,
                     description,
                     link,
-                    bid
+                    bid,
+                    active: true
                 }]);
 
-            if (error) return res.status(400).json({ error: error.message });
+            if (error) {
+                return res.status(400).json({ error: error.message });
+            }
 
             return res.json({ ok: true });
         }
@@ -277,22 +318,41 @@ export default async function handler(req, res) {
                 const session = event.data.object;
 
                 const userId = session.metadata.user_id;
-                const amount = session.amount_total / 100;
 
-                // pega saldo atual
-                const { data: user } = await supabase
-                    .from("users")
-                    .select("balance")
-                    .eq("id", userId)
-                    .single();
+                // 🧠 DIFERENCIAR TIPO
+                if (session.mode === "payment") {
 
-                // soma saldo
-                await supabase
-                    .from("users")
-                    .update({
-                        balance: (user.balance || 0) + amount
-                    })
-                    .eq("id", userId);
+                    // 💰 SALDO
+                    const amount = session.amount_total / 100;
+
+                    const { data: user } = await supabase
+                        .from("users")
+                        .select("balance")
+                        .eq("id", userId)
+                        .single();
+
+                    await supabase
+                        .from("users")
+                        .update({
+                            balance: (user.balance || 0) + amount
+                        })
+                        .eq("id", userId);
+
+                    console.log("Saldo adicionado:", amount);
+                }
+
+                if (session.mode === "subscription") {
+
+                    // 💳 PLANO
+                    await supabase
+                        .from("users")
+                        .update({
+                            plan: "pro"
+                        })
+                        .eq("id", userId);
+
+                    console.log("Plano ativado PRO");
+                }
             }
 
 
@@ -316,6 +376,35 @@ export default async function handler(req, res) {
             }
 
             return res.json({ received: true });
+        }
+
+        // ================= CREATE SUBSCRIPTION =================
+
+        if (action === "createSubscription") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+
+            const { data: { user } } = await supabase.auth.getUser(token);
+
+            const session = await stripe.checkout.sessions.create({
+                mode: "subscription",
+
+                line_items: [
+                    {
+                        price: "price_xxx", // ID do Stripe
+                        quantity: 1
+                    }
+                ],
+
+                success_url: `${process.env.BASE_URL}/?success=true`,
+                cancel_url: `${process.env.BASE_URL}/?cancel=true`,
+
+                metadata: {
+                    user_id: user.id
+                }
+            });
+
+            return res.json({ url: session.url });
         }
 
         return res.json({ ok: true });

@@ -216,6 +216,48 @@ async function carregarAdsPublicos() {
     });
 }
 
+// ================= RENDER ADS =================
+
+function renderAds(ads) {
+
+    const container = document.getElementById("ads");
+    container.innerHTML = "";
+
+    ads.forEach(ad => {
+
+        const ctr = ad.views > 0
+            ? ((ad.clicks / ad.views) * 100).toFixed(2)
+            : 0;
+
+        container.innerHTML += `
+            <div class="card">
+                <h3>${ad.title}</h3>
+
+                <p>💰 Bid: R$ ${ad.bid}</p>
+                <p>👁️ Views: ${ad.views}</p>
+                <p>🖱️ Cliques: ${ad.clicks}</p>
+                <p>📊 CTR: ${ctr}%</p>
+
+                <a href="${ad.link}" target="_blank">
+                    Ver anúncio
+                </a>
+            </div>
+        `;
+    });
+}
+
+// ================= ATUALIZAR STATS =================
+
+function atualizarStats(ads) {
+
+    const totalClicks = ads.reduce((sum, ad) => sum + ad.clicks, 0);
+    const totalViews = ads.reduce((sum, ad) => sum + ad.views, 0);
+
+    document.getElementById("totalClicks").innerText = totalClicks;
+    document.getElementById("totalViews").innerText = totalViews;
+    document.getElementById("totalAds").innerText = ads.length;
+}
+
 // ================= AUTO INIT =================
 if (getToken()) init();
 
@@ -225,4 +267,6 @@ window.criarAd = criarAd;
 window.pagar = pagar;
 window.clicarAd = clicarAd;
 window.carregarAdsPublicos = carregarAdsPublicos;
+window.renderAds = renderAds;
+window.atualizarStats = atualizarStats;
 window.logout = logout;
