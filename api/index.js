@@ -1,27 +1,70 @@
-import { createClient } from '@supabase/supabase-js';
-import Stripe from 'stripe';
+export default async function handler(req, res) {
 
-const stripe = process.env.STRIPE_SECRET_KEY
-    ? new Stripe(process.env.STRIPE_SECRET_KEY)
-    : null;
+    const { action } = req.query;
 
-function getSupabase(token) {
-    return createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY,
-        token
-            ? {
-                global: {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
+    try {
+
+        // ================= LOGIN FAKE (TESTE) =================
+        if (action === "login") {
+
+            const { email, password } = req.body || {};
+
+            if (!email || !password) {
+                return res.status(400).json({ error: "Dados inválidos" });
             }
-            : {}
-    );
-}
 
-export default function handler(req, res) {
-    return res.json({
-        ok: true,
-        message: "API funcionando"
-    });
+            return res.json({
+                token: "fake-token",
+                user: { email }
+            });
+        }
+
+        // ================= REGISTER =================
+        if (action === "register") {
+            return res.json({ ok: true });
+        }
+
+        // ================= USER =================
+        if (action === "getUser") {
+            return res.json({
+                balance: 100
+            });
+        }
+
+        // ================= CHECKOUT =================
+        if (action === "createCheckout") {
+            return res.json({
+                url: "https://example.com/pagamento"
+            });
+        }
+
+        // ================= ADS =================
+        if (action === "createAd") {
+            return res.json({ ok: true });
+        }
+
+        if (action === "myAds") {
+            return res.json([
+                {
+                    id: 1,
+                    title: "Produto Teste",
+                    description: "Descrição teste",
+                    link: "https://google.com",
+                    bid: 2,
+                    clicks: 5,
+                    views: 20
+                }
+            ]);
+        }
+
+        if (action === "clickAd") {
+            return res.json({ ok: true });
+        }
+
+        return res.json({ ok: true });
+
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Erro interno" });
+    }
 }

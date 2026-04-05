@@ -1,19 +1,15 @@
-const API = window.location.origin + "/api";
+const API = "/api";
 
 // ================= SAFE JSON =================
 async function safeJson(res) {
-    const text = await res.text();
 
-    if (!res.ok) {
-        console.error("Erro API:", text);
-        throw new Error(text);
-    }
+    let text = await res.text();
 
     try {
         return JSON.parse(text);
     } catch {
-        console.error("Resposta inválida:", text);
-        throw new Error("Resposta inválida");
+        console.error("Erro API:", text);
+        throw new Error("Resposta inválida da API");
     }
 }
 
@@ -40,8 +36,8 @@ async function login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
+            email: email.value,
+            password: password.value
         })
     });
 
@@ -51,36 +47,27 @@ async function login() {
         setToken(data.token);
         init();
     } else {
-        alert(data.error || "Erro no login");
+        alert(data.error);
     }
 }
 
 async function register() {
 
     const res = await fetch(`${API}?action=register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
-        })
+        method: "POST"
     });
 
     const data = await safeJson(res);
 
-    if (data.error) {
-        alert(data.error);
-    } else {
-        alert("Conta criada! Faça login.");
-    }
+    alert("Conta criada!");
 }
 
 // ================= INIT =================
 
 async function init() {
 
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
+    loginBox.classList.add("hidden");
+    dashboard.classList.remove("hidden");
 
     await carregarSaldo();
     await carregarAds();
@@ -90,15 +77,10 @@ async function init() {
 
 async function carregarSaldo() {
 
-    const res = await fetch(`${API}?action=getUser`, {
-        headers: {
-            Authorization: "Bearer " + getToken()
-        }
-    });
-
+    const res = await fetch(`${API}?action=getUser`);
     const data = await safeJson(res);
 
-    document.getElementById("saldo").innerText = data.balance || 0;
+    saldo.innerText = data.balance;
 }
 
 // ================= PAGAMENTO =================
@@ -107,119 +89,37 @@ async function pagar() {
 
     const valor = document.getElementById("valor").value;
 
-    if (!valor || valor <= 0) {
-        alert("Digite um valor válido");
-        return;
-    }
-
     const res = await fetch(`${API}?action=createCheckout`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + getToken()
-        },
         body: JSON.stringify({ amount: Number(valor) })
     });
 
     const data = await safeJson(res);
 
-    if (data.url) {
-        window.location.href = data.url;
-    } else {
-        alert(data.error || "Erro ao iniciar pagamento");
-    }
-}
-
-// ================= CRIAR AD =================
-
-async function criarAd() {
-
-    const res = await fetch(`${API}?action=createAd`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + getToken()
-        },
-        body: JSON.stringify({
-            title: document.getElementById("title").value,
-            description: document.getElementById("description").value,
-            link: document.getElementById("link").value,
-            bid: Number(document.getElementById("bid").value)
-        })
-    });
-
-    const data = await safeJson(res);
-
-    if (data.ok) {
-        alert("Anúncio criado!");
-        carregarAds();
-    } else {
-        alert(data.error);
-    }
-}
-
-// ================= CLICK =================
-
-function clicarAd(id, url) {
-
-    fetch(`${API}?action=clickAd`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + getToken()
-        },
-        body: JSON.stringify({ ad_id: id })
-    });
-
-    window.open(url, "_blank");
+    window.location.href = data.url;
 }
 
 // ================= ADS =================
 
 async function carregarAds() {
 
-    const res = await fetch(`${API}?action=myAds`, {
-        headers: {
-            Authorization: "Bearer " + getToken()
-        }
-    });
-
+    const res = await fetch(`${API}?action=myAds`);
     const ads = await safeJson(res);
 
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
-    let totalClicks = 0;
-    let totalViews = 0;
-
     ads.forEach(ad => {
-
-        totalClicks += ad.clicks || 0;
-        totalViews += ad.views || 0;
-
         container.innerHTML += `
             <div class="card">
                 <h4>${ad.title}</h4>
-                <p>${ad.description || ""}</p>
-
-                <button onclick="clicarAd('${ad.id}', '${ad.link}')">
-                    🔗 Ver produto
-                </button>
-
-                <p>💰 Bid: R$ ${ad.bid}</p>
-                <p>👁 Views: ${ad.views || 0}</p>
-                <p>🖱 Clicks: ${ad.clicks || 0}</p>
+                <p>${ad.description}</p>
+                <a href="${ad.link}" target="_blank">Ver</a>
             </div>
         `;
     });
-
-    document.getElementById("totalAds").innerText = ads.length;
-    document.getElementById("totalClicks").innerText = totalClicks;
-    document.getElementById("totalViews").innerText = totalViews;
 }
 
 // ================= AUTO INIT =================
 
-if (getToken()) {
-    init();
-}
+if (getToken()) init();
