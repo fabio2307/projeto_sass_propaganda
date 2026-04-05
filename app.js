@@ -101,7 +101,7 @@ async function pagar() {
 
     const valor = Number(document.getElementById("valor").value);
 
-    const res = await fetch(`${API}?action=addBalance`, {
+    const res = await fetch(`${API}?action=createCheckout`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -112,8 +112,7 @@ async function pagar() {
 
     const data = await safeJson(res);
 
-    alert("Saldo adicionado!");
-    carregarSaldo();
+    window.location.href = data.url;
 }
 
 // ================= CRIAR AD =================

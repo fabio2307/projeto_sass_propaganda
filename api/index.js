@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -166,6 +169,45 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
+        // ================= CREATE CHECKOUT =================
+
+        if (action === "createCheckout") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+            const { amount } = req.body;
+
+            if (!token) {
+                return res.status(401).json({ error: "Sem token" });
+            }
+
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ["card"],
+                mode: "payment",
+
+                line_items: [
+                    {
+                        price_data: {
+                            currency: "brl",
+                            product_data: {
+                                name: "Adicionar saldo"
+                            },
+                            unit_amount: amount * 100 // centavos
+                        },
+                        quantity: 1
+                    }
+                ],
+
+                success_url: `${process.env.BASE_URL}/?success=true`,
+                cancel_url: `${process.env.BASE_URL}/?cancel=true`,
+
+                metadata: {
+                    user_id: token
+                }
+            });
+
+            return res.json({ url: session.url });
+        }
+
         // ================= LIST PUBLIC ADS =================
         if (action === "listPublicAds") {
 
@@ -175,6 +217,51 @@ export default async function handler(req, res) {
                 .order("bid", { ascending: false });
 
             return res.json(data);
+        }
+
+        // ================= WEBHOOK STRIPE =================
+
+        if (action === "webhook") {
+
+            const sig = req.headers["stripe-signature"];
+
+            let event;
+
+            try {
+                event = stripe.webhooks.constructEvent(
+                    req.rawBody,
+                    sig,
+                    process.env.STRIPE_WEBHOOK_SECRET
+                );
+            } catch (err) {
+                return res.status(400).send(`Webhook error: ${err.message}`);
+            }
+
+            // 💰 PAGAMENTO CONFIRMADO
+            if (event.type === "checkout.session.completed") {
+
+                const session = event.data.object;
+
+                const userId = session.metadata.user_id;
+                const amount = session.amount_total / 100;
+
+                // pega saldo atual
+                const { data: user } = await supabase
+                    .from("users")
+                    .select("balance")
+                    .eq("id", userId)
+                    .single();
+
+                // soma saldo
+                await supabase
+                    .from("users")
+                    .update({
+                        balance: (user.balance || 0) + amount
+                    })
+                    .eq("id", userId);
+            }
+
+            return res.json({ received: true });
         }
 
         return res.json({ ok: true });
