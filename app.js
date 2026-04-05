@@ -39,7 +39,9 @@ async function login() {
 
     const res = await fetch(`${API}?action=login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+            Authorization: "Bearer " + getToken()
+        },
         body: JSON.stringify({
             email: email.value,
             password: password.value
@@ -111,7 +113,7 @@ async function criarAd() {
     const res = await fetch(`${API}?action=createAd`, {
         method: "POST",
         headers: {
-            "Content-Type": "application/json"
+            Authorization: "Bearer " + getToken()
         },
         body: JSON.stringify({
             title: document.getElementById("title").value,
