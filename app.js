@@ -3,13 +3,18 @@ const API = "/api";
 // ================= SAFE JSON =================
 async function safeJson(res) {
 
-    let text = await res.text();
+    const text = await res.text();
+
+    if (!res.ok) {
+        console.error("Erro API:", text);
+        throw new Error(text);
+    }
 
     try {
         return JSON.parse(text);
     } catch {
-        console.error("Erro API:", text);
-        throw new Error("Resposta inválida da API");
+        console.error("Resposta inválida:", text);
+        throw new Error("Resposta inválida");
     }
 }
 
@@ -123,3 +128,9 @@ async function carregarAds() {
 // ================= AUTO INIT =================
 
 if (getToken()) init();
+
+window.login = login;
+window.register = register;
+window.criarAd = criarAd;
+window.pagar = pagar;
+window.logout = logout;
