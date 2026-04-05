@@ -34,7 +34,7 @@ export default async function handler(req, res) {
         // ================= CHECKOUT =================
         if (action === "createCheckout") {
             return res.json({
-                url: "https://example.com/pagamento"
+                url: "https://checkout.stripe.com"
             });
         }
 

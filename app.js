@@ -106,6 +106,31 @@ async function pagar() {
 
 // ================= ADS =================
 
+async function criarAd() {
+
+    const res = await fetch(`${API}?action=createAd`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: document.getElementById("title").value,
+            description: document.getElementById("description").value,
+            link: document.getElementById("link").value,
+            bid: Number(document.getElementById("bid").value)
+        })
+    });
+
+    const data = await safeJson(res);
+
+    if (data.ok) {
+        alert("Anúncio criado!");
+        carregarAds();
+    } else {
+        alert(data.error || "Erro ao criar anúncio");
+    }
+}
+
 async function carregarAds() {
 
     const res = await fetch(`${API}?action=myAds`);
@@ -131,6 +156,7 @@ if (getToken()) init();
 
 window.login = login;
 window.register = register;
+window.criarAd = criarAd;
 window.criarAd = criarAd;
 window.pagar = pagar;
 window.logout = logout;
