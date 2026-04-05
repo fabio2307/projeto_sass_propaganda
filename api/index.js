@@ -155,12 +155,44 @@ export default async function handler(req, res) {
 
             const { id } = req.body;
 
+            // 1. Buscar anúncio
             const { data: ad } = await supabase
                 .from("ads")
-                .select("clicks")
+                .select("*")
                 .eq("id", id)
                 .single();
 
+            if (!ad || !ad.active) {
+                return res.status(400).json({ error: "Anúncio inválido" });
+            }
+
+            // 2. Buscar usuário dono do anúncio
+            const { data: user } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", ad.user_id)
+                .single();
+
+            const novoSaldo = (user.balance || 0) - ad.bid;
+
+            // 3. Se saldo acabou → desativa anúncio
+            if (novoSaldo < 0) {
+
+                await supabase
+                    .from("ads")
+                    .update({ active: false })
+                    .eq("id", id);
+
+                return res.json({ ok: false, error: "Saldo insuficiente" });
+            }
+
+            // 4. Atualiza saldo
+            await supabase
+                .from("users")
+                .update({ balance: novoSaldo })
+                .eq("id", ad.user_id);
+
+            // 5. Atualiza clique
             await supabase
                 .from("ads")
                 .update({ clicks: ad.clicks + 1 })
@@ -214,7 +246,9 @@ export default async function handler(req, res) {
             const { data } = await supabase
                 .from("ads")
                 .select("*")
-                .order("bid", { ascending: false });
+                .eq("active", true) // só ativos
+                .order("bid", { ascending: false }) // maior paga mais
+                .limit(20);
 
             return res.json(data);
         }
@@ -259,6 +293,26 @@ export default async function handler(req, res) {
                         balance: (user.balance || 0) + amount
                     })
                     .eq("id", userId);
+            }
+
+
+            // ================= VIEW AD =================
+            if (action === "viewAd") {
+
+                const { id } = req.body;
+
+                const { data: ad } = await supabase
+                    .from("ads")
+                    .select("views")
+                    .eq("id", id)
+                    .single();
+
+                await supabase
+                    .from("ads")
+                    .update({ views: ad.views + 1 })
+                    .eq("id", id);
+
+                return res.json({ ok: true });
             }
 
             return res.json({ received: true });

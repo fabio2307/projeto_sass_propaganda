@@ -171,13 +171,17 @@ async function carregarAds() {
 
 async function clicarAd(id) {
 
-    await fetch(`${API}?action=clickAd`, {
+    const res = await fetch(`/api?action=clickAd`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id })
     });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+        alert("Saldo insuficiente — anúncio pausado");
+    }
 }
 
 // ================= ADS PÚBLICOS =================
@@ -188,12 +192,25 @@ async function carregarAdsPublicos() {
     const ads = await res.json();
 
     const container = document.getElementById("ads");
+    container.innerHTML = "";
 
     ads.forEach(ad => {
+
+        // contar view
+        fetch(`/api?action=viewAd`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: ad.id })
+        });
+
         container.innerHTML += `
-            <div>
+            <div class="card">
                 <h3>${ad.title}</h3>
-                <a href="${ad.link}" target="_blank">${ad.link}</a>
+                <p>${ad.description}</p>
+                <a href="${ad.link}" target="_blank"
+                   onclick="clicarAd('${ad.id}')">
+                   Acessar
+                </a>
             </div>
         `;
     });
