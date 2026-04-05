@@ -99,9 +99,21 @@ async function carregarSaldo() {
 // ================= PAGAMENTO =================
 async function pagar() {
 
-    const valor = document.getElementById("valor").value;
+    const valor = Number(document.getElementById("valor").value);
 
-    alert("Pagamento ainda não implementado com Stripe");
+    const res = await fetch(`${API}?action=addBalance`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + getToken()
+        },
+        body: JSON.stringify({ amount: valor })
+    });
+
+    const data = await safeJson(res);
+
+    alert("Saldo adicionado!");
+    carregarSaldo();
 }
 
 // ================= CRIAR AD =================
@@ -150,7 +162,39 @@ async function carregarAds() {
             <div class="card">
                 <h4>${ad.title}</h4>
                 <p>${ad.description}</p>
-                <a href="${ad.link}" target="_blank">Ver</a>
+                <a href="${ad.link}" target="_blank" onclick="clicarAd('${ad.id}')">Ver</a>
+            </div>
+        `;
+    });
+}
+
+// ================= CLICAR AD =================
+
+async function clicarAd(id) {
+
+    await fetch(`${API}?action=clickAd`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ id })
+    });
+}
+
+// ================= ADS PÚBLICOS =================
+
+async function carregarAdsPublicos() {
+
+    const res = await fetch(`/api?action=listPublicAds`);
+    const ads = await res.json();
+
+    const container = document.getElementById("ads");
+
+    ads.forEach(ad => {
+        container.innerHTML += `
+            <div>
+                <h3>${ad.title}</h3>
+                <a href="${ad.link}" target="_blank">${ad.link}</a>
             </div>
         `;
     });
@@ -163,4 +207,6 @@ window.login = login;
 window.register = register;
 window.criarAd = criarAd;
 window.pagar = pagar;
+window.clicarAd = clicarAd;
+window.carregarAdsPublicos = carregarAdsPublicos;
 window.logout = logout;

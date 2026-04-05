@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from "bcryptjs";
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -20,9 +21,15 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
+            const hash = await bcrypt.hash(password, 10);
+
             const { error } = await supabase
                 .from("users")
-                .insert([{ email, password, balance: 0 }]);
+                .insert([{
+                    email,
+                    password: hash, // ✅ AGORA CORRETO
+                    balance: 0
+                }]);
 
             if (error) return res.status(400).json({ error: error.message });
 
@@ -34,19 +41,27 @@ export default async function handler(req, res) {
 
             const { email, password } = req.body;
 
-            const { data, error } = await supabase
+            // 1. Busca usuário pelo email
+            const { data: user, error } = await supabase
                 .from("users")
                 .select("*")
                 .eq("email", email)
-                .eq("password", password)
                 .single();
 
-            if (error || !data) {
+            if (error || !user) {
                 return res.status(401).json({ error: "Login inválido" });
             }
 
+            // 2. Compara senha com hash
+            const match = await bcrypt.compare(password, user.password);
+
+            if (!match) {
+                return res.status(401).json({ error: "Login inválido" });
+            }
+
+            // 3. Retorna token
             return res.json({
-                token: data.id
+                token: user.id
             });
         }
 
@@ -102,6 +117,62 @@ export default async function handler(req, res) {
                 .select("*")
                 .eq("user_id", token)
                 .order("created_at", { ascending: false });
+
+            return res.json(data);
+        }
+
+        // ================= ADD BALANCE =================
+        if (action === "addBalance") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+            const { amount } = req.body;
+
+            if (!token) {
+                return res.status(401).json({ error: "Sem token" });
+            }
+
+            const { data: user } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", token)
+                .single();
+
+            const novoSaldo = (user.balance || 0) + amount;
+
+            await supabase
+                .from("users")
+                .update({ balance: novoSaldo })
+                .eq("id", token);
+
+            return res.json({ ok: true, balance: novoSaldo });
+        }
+
+        // ================= CLICK AD =================
+        if (action === "clickAd") {
+
+            const { id } = req.body;
+
+            const { data: ad } = await supabase
+                .from("ads")
+                .select("clicks")
+                .eq("id", id)
+                .single();
+
+            await supabase
+                .from("ads")
+                .update({ clicks: ad.clicks + 1 })
+                .eq("id", id);
+
+            return res.json({ ok: true });
+        }
+
+        // ================= LIST PUBLIC ADS =================
+        if (action === "listPublicAds") {
+
+            const { data } = await supabase
+                .from("ads")
+                .select("*")
+                .order("bid", { ascending: false });
 
             return res.json(data);
         }
