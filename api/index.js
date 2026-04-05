@@ -16,9 +16,13 @@ export default async function handler(req, res) {
 
             const { email, password } = req.body;
 
+            if (!email || !password) {
+                return res.status(400).json({ error: "Dados inválidos" });
+            }
+
             const { error } = await supabase
                 .from("users")
-                .insert([{ email, password }]);
+                .insert([{ email, password, balance: 0 }]);
 
             if (error) return res.status(400).json({ error: error.message });
 
@@ -37,11 +41,12 @@ export default async function handler(req, res) {
                 .eq("password", password)
                 .single();
 
-            if (error) return res.status(401).json({ error: "Login inválido" });
+            if (error || !data) {
+                return res.status(401).json({ error: "Login inválido" });
+            }
 
             return res.json({
-                token: data.id,
-                user: data
+                token: data.id
             });
         }
 
@@ -49,6 +54,8 @@ export default async function handler(req, res) {
         if (action === "getUser") {
 
             const token = req.headers.authorization?.split(" ")[1];
+
+            if (!token) return res.status(401).json({ error: "Sem token" });
 
             const { data } = await supabase
                 .from("users")
@@ -63,6 +70,8 @@ export default async function handler(req, res) {
         if (action === "createAd") {
 
             const token = req.headers.authorization?.split(" ")[1];
+
+            if (!token) return res.status(401).json({ error: "Sem token" });
 
             const { title, description, link, bid } = req.body;
 
@@ -85,6 +94,8 @@ export default async function handler(req, res) {
         if (action === "myAds") {
 
             const token = req.headers.authorization?.split(" ")[1];
+
+            if (!token) return res.status(401).json({ error: "Sem token" });
 
             const { data } = await supabase
                 .from("ads")

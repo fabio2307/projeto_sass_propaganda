@@ -2,7 +2,6 @@ const API = "/api";
 
 // ================= SAFE JSON =================
 async function safeJson(res) {
-
     const text = await res.text();
 
     if (!res.ok) {
@@ -13,13 +12,11 @@ async function safeJson(res) {
     try {
         return JSON.parse(text);
     } catch {
-        console.error("Resposta inválida:", text);
         throw new Error("Resposta inválida");
     }
 }
 
 // ================= TOKEN =================
-
 function getToken() {
     return localStorage.getItem("token");
 }
@@ -34,17 +31,16 @@ function logout() {
 }
 
 // ================= LOGIN =================
-
 async function login() {
 
     const res = await fetch(`${API}?action=login`, {
         method: "POST",
         headers: {
-            Authorization: "Bearer " + getToken()
+            "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            email: email.value,
-            password: password.value
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
         })
     });
 
@@ -58,61 +54,63 @@ async function login() {
     }
 }
 
+// ================= REGISTER =================
 async function register() {
 
     const res = await fetch(`${API}?action=register`, {
-        method: "POST"
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+        })
     });
 
-    const data = await safeJson(res);
+    await safeJson(res);
 
     alert("Conta criada!");
 }
 
 // ================= INIT =================
-
 async function init() {
-
-    loginBox.classList.add("hidden");
-    dashboard.classList.remove("hidden");
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
 
     await carregarSaldo();
     await carregarAds();
 }
 
 // ================= SALDO =================
-
 async function carregarSaldo() {
 
-    const res = await fetch(`${API}?action=getUser`);
-    const data = await safeJson(res);
-
-    saldo.innerText = data.balance;
-}
-
-// ================= PAGAMENTO =================
-
-async function pagar() {
-
-    const valor = document.getElementById("valor").value;
-
-    const res = await fetch(`${API}?action=createCheckout`, {
-        method: "POST",
-        body: JSON.stringify({ amount: Number(valor) })
+    const res = await fetch(`${API}?action=getUser`, {
+        headers: {
+            Authorization: "Bearer " + getToken()
+        }
     });
 
     const data = await safeJson(res);
 
-    window.location.href = data.url;
+    document.getElementById("saldo").innerText = data.balance || 0;
 }
 
-// ================= ADS =================
+// ================= PAGAMENTO =================
+async function pagar() {
 
+    const valor = document.getElementById("valor").value;
+
+    alert("Pagamento ainda não implementado com Stripe");
+}
+
+// ================= CRIAR AD =================
 async function criarAd() {
 
     const res = await fetch(`${API}?action=createAd`, {
         method: "POST",
         headers: {
+            "Content-Type": "application/json",
             Authorization: "Bearer " + getToken()
         },
         body: JSON.stringify({
@@ -129,13 +127,19 @@ async function criarAd() {
         alert("Anúncio criado!");
         carregarAds();
     } else {
-        alert(data.error || "Erro ao criar anúncio");
+        alert(data.error);
     }
 }
 
+// ================= LISTAR ADS =================
 async function carregarAds() {
 
-    const res = await fetch(`${API}?action=myAds`);
+    const res = await fetch(`${API}?action=myAds`, {
+        headers: {
+            Authorization: "Bearer " + getToken()
+        }
+    });
+
     const ads = await safeJson(res);
 
     const container = document.getElementById("ads");
@@ -153,12 +157,10 @@ async function carregarAds() {
 }
 
 // ================= AUTO INIT =================
-
 if (getToken()) init();
 
 window.login = login;
 window.register = register;
-window.criarAd = criarAd;
 window.criarAd = criarAd;
 window.pagar = pagar;
 window.logout = logout;
