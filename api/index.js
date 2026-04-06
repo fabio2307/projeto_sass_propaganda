@@ -49,7 +49,7 @@ export default async function handler(req, res) {
                 .from("users")
                 .select("*")
                 .eq("email", email)
-                .single();
+                .maybeSingle();
 
             if (error || !user) {
                 return res.status(401).json({ error: "Login inválido" });
