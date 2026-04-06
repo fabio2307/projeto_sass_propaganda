@@ -254,3 +254,4 @@ window.carregarAdsPublicos = carregarAdsPublicos;
 window.renderAds = renderAds;
 window.atualizarStats = atualizarStats;
 window.logout = logout;
+window.init = init;
