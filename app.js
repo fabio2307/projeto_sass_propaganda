@@ -50,7 +50,7 @@ async function login() {
         const data = await safeJson(res);
 
         setToken(data.token);
-        init();
+        await init();
 
     } catch (err) {
         alert(err.message);
@@ -73,7 +73,34 @@ async function register() {
 
         await safeJson(res);
 
-        alert("Conta criada! Faça login.");
+        alert("Conta criada! Agora faça login.");
+
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+// ================= INIT =================
+async function init() {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+
+    await carregarSaldo();
+    await carregarAds();
+}
+
+// ================= SALDO =================
+async function carregarSaldo() {
+    try {
+        const res = await fetch(`${API}?action=getUser`, {
+            headers: {
+                Authorization: "Bearer " + getToken()
+            }
+        });
+
+        const data = await safeJson(res);
+
+        document.getElementById("saldo").innerText = data.balance || 0;
 
     } catch (err) {
         alert(err.message);
@@ -82,128 +109,130 @@ async function register() {
 
 // ================= PAGAMENTO =================
 async function pagar() {
+    try {
+        const valor = Number(document.getElementById("valor").value);
 
-    const valor = Number(document.getElementById("valor").value);
+        const res = await fetch(`${API}?action=createCheckout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + getToken()
+            },
+            body: JSON.stringify({ amount: valor })
+        });
 
-    const res = await fetch(`${API}?action=createCheckout`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + getToken()
-        },
-        body: JSON.stringify({ amount: valor })
-    });
+        const data = await safeJson(res);
 
-    const data = await safeJson(res);
+        window.location.href = data.url;
 
-    window.location.href = data.url;
+    } catch (err) {
+        alert(err.message);
+    }
 }
 
 // ================= CRIAR AD =================
 async function criarAd() {
+    try {
+        const res = await fetch(`${API}?action=createAd`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + getToken()
+            },
+            body: JSON.stringify({
+                title: document.getElementById("title").value,
+                description: document.getElementById("description").value,
+                link: document.getElementById("link").value,
+                bid: Number(document.getElementById("bid").value)
+            })
+        });
 
-    const res = await fetch(`${API}?action=createAd`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + getToken()
-        },
-        body: JSON.stringify({
-            title: document.getElementById("title").value,
-            description: document.getElementById("description").value,
-            link: document.getElementById("link").value,
-            bid: Number(document.getElementById("bid").value)
-        })
-    });
+        const data = await safeJson(res);
 
-    const data = await safeJson(res);
-
-    if (data.ok) {
         alert("Anúncio criado!");
-        carregarAds();
-    } else {
-        alert(data.error);
+        await carregarAds();
+
+    } catch (err) {
+        alert(err.message);
     }
 }
 
 // ================= LISTAR ADS =================
 async function carregarAds() {
+    try {
+        const res = await fetch(`${API}?action=myAds`, {
+            headers: {
+                Authorization: "Bearer " + getToken()
+            }
+        });
 
-    const res = await fetch(`${API}?action=myAds`, {
-        headers: {
-            Authorization: "Bearer " + getToken()
-        }
-    });
+        const ads = await safeJson(res);
 
-    const ads = await safeJson(res);
+        renderAds(ads);
+        atualizarStats(ads);
 
-    const container = document.getElementById("ads");
-    container.innerHTML = "";
-
-    ads.forEach(ad => {
-        container.innerHTML += `
-            <div class="card">
-                <h4>${ad.title}</h4>
-                <p>${ad.description}</p>
-                <a href="${ad.link}" target="_blank" onclick="clicarAd('${ad.id}')">Ver</a>
-            </div>
-        `;
-    });
+    } catch (err) {
+        alert(err.message);
+    }
 }
 
 // ================= CLICAR AD =================
-
 async function clicarAd(id) {
+    try {
+        const res = await fetch(`/api?action=clickAd`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id })
+        });
 
-    const res = await fetch(`/api?action=clickAd`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id })
-    });
+        const data = await res.json();
 
-    const data = await res.json();
+        if (!data.ok) {
+            alert("Saldo insuficiente — anúncio pausado");
+        }
 
-    if (!data.ok) {
-        alert("Saldo insuficiente — anúncio pausado");
+    } catch (err) {
+        console.error(err);
     }
 }
 
 // ================= ADS PÚBLICOS =================
-
 async function carregarAdsPublicos() {
+    try {
+        const res = await fetch(`/api?action=listPublicAds`);
+        const ads = await res.json();
 
-    const res = await fetch(`/api?action=listPublicAds`);
-    const ads = await res.json();
+        const container = document.getElementById("ads");
+        container.innerHTML = "";
 
-    const container = document.getElementById("ads");
-    container.innerHTML = "";
+        ads.forEach(ad => {
 
-    ads.forEach(ad => {
+            // contar view
+            fetch(`/api?action=viewAd`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: ad.id })
+            });
 
-        // contar view
-        fetch(`/api?action=viewAd`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: ad.id })
+            container.innerHTML += `
+                <div class="card">
+                    <h3>${ad.title}</h3>
+                    <p>${ad.description}</p>
+                    <a href="${ad.link}" target="_blank"
+                       onclick="clicarAd('${ad.id}')">
+                       Acessar
+                    </a>
+                </div>
+            `;
         });
 
-        container.innerHTML += `
-            <div class="card">
-                <h3>${ad.title}</h3>
-                <p>${ad.description}</p>
-                <a href="${ad.link}" target="_blank"
-                   onclick="clicarAd('${ad.id}')">
-                   Acessar
-                </a>
-            </div>
-        `;
-    });
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 // ================= RENDER ADS =================
-
 function renderAds(ads) {
-
     const container = document.getElementById("ads");
     container.innerHTML = "";
 
@@ -230,10 +259,8 @@ function renderAds(ads) {
     });
 }
 
-// ================= ATUALIZAR STATS =================
-
+// ================= STATS =================
 function atualizarStats(ads) {
-
     const totalClicks = ads.reduce((sum, ad) => sum + ad.clicks, 0);
     const totalViews = ads.reduce((sum, ad) => sum + ad.views, 0);
 
@@ -242,9 +269,14 @@ function atualizarStats(ads) {
     document.getElementById("totalAds").innerText = ads.length;
 }
 
-// ================= AUTO INIT =================
-if (getToken()) init();
+// ================= INIT AUTO =================
+window.onload = () => {
+    if (getToken()) {
+        init();
+    }
+};
 
+// ================= EXPORT GLOBAL =================
 window.login = login;
 window.register = register;
 window.criarAd = criarAd;
