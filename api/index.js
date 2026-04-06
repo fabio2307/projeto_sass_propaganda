@@ -173,7 +173,8 @@ export default async function handler(req, res) {
                 }]);
 
             if (error) {
-                return res.status(400).json({ error: "Erro ao criar anúncio" });
+                console.error("SUPABASE ERROR:", error);
+                return res.status(400).json({ error: error.message });
             }
 
             return res.json({ ok: true });

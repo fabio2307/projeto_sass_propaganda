@@ -281,6 +281,14 @@ window.onload = () => {
     }
 };
 
+// ================= DEBUG =================
+console.log({
+    title: document.getElementById("title").value,
+    description: document.getElementById("description").value,
+    link: document.getElementById("link").value,
+    bid: Number(document.getElementById("bid").value)
+});
+
 // ================= EXPORT GLOBAL =================
 window.login = login;
 window.register = register;
