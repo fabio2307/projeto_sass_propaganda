@@ -4,16 +4,19 @@ const API = "/api";
 async function safeJson(res) {
     const text = await res.text();
 
-    if (!res.ok) {
-        console.error("Erro API:", text);
-        throw new Error(text);
-    }
+    let data;
 
     try {
-        return JSON.parse(text);
+        data = JSON.parse(text);
     } catch {
-        throw new Error("Resposta inválida");
+        throw new Error("Erro inesperado");
     }
+
+    if (!res.ok) {
+        throw new Error(data.error || "Erro desconhecido");
+    }
+
+    return data;
 }
 
 // ================= TOKEN =================
@@ -32,68 +35,49 @@ function logout() {
 
 // ================= LOGIN =================
 async function login() {
+    try {
+        const res = await fetch(`${API}?action=login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            })
+        });
 
-    const res = await fetch(`${API}?action=login`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
-        })
-    });
+        const data = await safeJson(res);
 
-    const data = await safeJson(res);
-
-    if (data.token) {
         setToken(data.token);
         init();
-    } else {
-        alert(data.error);
+
+    } catch (err) {
+        alert(err.message);
     }
 }
 
 // ================= REGISTER =================
 async function register() {
+    try {
+        const res = await fetch(`${API}?action=register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            })
+        });
 
-    const res = await fetch(`${API}?action=register`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            email: document.getElementById("email").value,
-            password: document.getElementById("password").value
-        })
-    });
+        await safeJson(res);
 
-    await safeJson(res);
+        alert("Conta criada! Faça login.");
 
-    alert("Conta criada!");
-}
-
-// ================= INIT =================
-async function init() {
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
-
-    await carregarSaldo();
-    await carregarAds();
-}
-
-// ================= SALDO =================
-async function carregarSaldo() {
-
-    const res = await fetch(`${API}?action=getUser`, {
-        headers: {
-            Authorization: "Bearer " + getToken()
-        }
-    });
-
-    const data = await safeJson(res);
-
-    document.getElementById("saldo").innerText = data.balance || 0;
+    } catch (err) {
+        alert(err.message);
+    }
 }
 
 // ================= PAGAMENTO =================
