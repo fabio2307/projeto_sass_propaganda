@@ -84,10 +84,37 @@ export default async function handler(req, res) {
             const { data } = await supabase
                 .from("users")
                 .select("balance")
-                .eq("id", token)
+                .eq("id", user.id)
                 .single();
 
             return res.json(data);
+        }
+
+        // ================= FUNÇÃO AUXILIAR =================
+
+        async function getUserFromToken(token) {
+
+            if (!token) return null;
+
+            // 🔐 tenta como JWT (novo padrão)
+            const { data } = await supabase.auth.getUser(token);
+
+            if (data?.user) {
+                return data.user; // ✅ usuário real
+            }
+
+            // ⚠️ fallback: sistema antigo (token = user.id)
+            const { data: user } = await supabase
+                .from("users")
+                .select("*")
+                .eq("id", user.id)
+                .single();
+
+            if (user) {
+                return { id: user.id }; // simula formato do JWT
+            }
+
+            return null;
         }
 
         // ================= CREATE AD =================
@@ -159,7 +186,7 @@ export default async function handler(req, res) {
             const { data } = await supabase
                 .from("ads")
                 .select("*")
-                .eq("user_id", token)
+                .eq("id", user.id)
                 .order("created_at", { ascending: false });
 
             return res.json(data);
@@ -178,7 +205,7 @@ export default async function handler(req, res) {
             const { data: user } = await supabase
                 .from("users")
                 .select("balance")
-                .eq("id", token)
+                .eq("id", user.id)
                 .single();
 
             const novoSaldo = (user.balance || 0) + amount;
@@ -186,7 +213,7 @@ export default async function handler(req, res) {
             await supabase
                 .from("users")
                 .update({ balance: novoSaldo })
-                .eq("id", token);
+                .eq("id", user.id);
 
             return res.json({ ok: true, balance: novoSaldo });
         }
@@ -274,7 +301,7 @@ export default async function handler(req, res) {
                 cancel_url: `${process.env.BASE_URL}/?cancel=true`,
 
                 metadata: {
-                    user_id: token
+                    user_id: user.id
                 }
             });
 
