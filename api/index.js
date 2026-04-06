@@ -96,22 +96,22 @@ export default async function handler(req, res) {
 
             if (!token) return null;
 
-            // 🔐 tenta como JWT (novo padrão)
+            // 🔐 JWT (novo)
             const { data } = await supabase.auth.getUser(token);
 
             if (data?.user) {
-                return data.user; // ✅ usuário real
+                return data.user;
             }
 
-            // ⚠️ fallback: sistema antigo (token = user.id)
+            // ⚠️ fallback (antigo)
             const { data: user } = await supabase
                 .from("users")
                 .select("*")
-                .eq("id", user.id)
+                .eq("id", token)
                 .single();
 
             if (user) {
-                return { id: user.id }; // simula formato do JWT
+                return { id: user.id };
             }
 
             return null;
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
             }
 
             // 🔐 pegar usuário real via JWT
-            const { data: { user } } = await supabase.auth.getUser(token);
+            const user = await getUserFromToken(token);
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
@@ -181,41 +181,17 @@ export default async function handler(req, res) {
 
             const token = req.headers.authorization?.split(" ")[1];
 
-            if (!token) return res.status(401).json({ error: "Sem token" });
+            const user = await getUserFromToken(token);
+
+            if (!user) return res.status(401).json({ error: "Não autorizado" });
 
             const { data } = await supabase
                 .from("ads")
                 .select("*")
-                .eq("id", user.id)
+                .eq("user_id", user.id)
                 .order("created_at", { ascending: false });
 
             return res.json(data);
-        }
-
-        // ================= ADD BALANCE =================
-        if (action === "addBalance") {
-
-            const token = req.headers.authorization?.split(" ")[1];
-            const { amount } = req.body;
-
-            if (!token) {
-                return res.status(401).json({ error: "Sem token" });
-            }
-
-            const { data: user } = await supabase
-                .from("users")
-                .select("balance")
-                .eq("id", user.id)
-                .single();
-
-            const novoSaldo = (user.balance || 0) + amount;
-
-            await supabase
-                .from("users")
-                .update({ balance: novoSaldo })
-                .eq("id", user.id);
-
-            return res.json({ ok: true, balance: novoSaldo });
         }
 
         // ================= CLICK AD =================
@@ -269,6 +245,36 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
+
+        // ================= ADD BALANCE (TESTE) =================
+
+        if (action === "addBalance") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+            const { amount } = req.body;
+
+            const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { data: dbUser } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", user.id)
+                .single();
+
+            const novoSaldo = (dbUser.balance || 0) + amount;
+
+            await supabase
+                .from("users")
+                .update({ balance: novoSaldo })
+                .eq("id", user.id);
+
+            return res.json({ ok: true, balance: novoSaldo });
+        }
+
         // ================= CREATE CHECKOUT =================
 
         if (action === "createCheckout") {
@@ -276,8 +282,10 @@ export default async function handler(req, res) {
             const token = req.headers.authorization?.split(" ")[1];
             const { amount } = req.body;
 
-            if (!token) {
-                return res.status(401).json({ error: "Sem token" });
+            const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
             }
 
             const session = await stripe.checkout.sessions.create({
@@ -291,7 +299,7 @@ export default async function handler(req, res) {
                             product_data: {
                                 name: "Adicionar saldo"
                             },
-                            unit_amount: amount * 100 // centavos
+                            unit_amount: amount * 100
                         },
                         quantity: 1
                     }
@@ -382,7 +390,6 @@ export default async function handler(req, res) {
                 }
             }
 
-
             // ================= VIEW AD =================
             if (action === "viewAd") {
 
@@ -396,48 +403,45 @@ export default async function handler(req, res) {
 
                 await supabase
                     .from("ads")
-                    .update({ views: ad.views + 1 })
+                    .update({ views: (ad.views || 0) + 1 })
                     .eq("id", id);
 
                 return res.json({ ok: true });
             }
 
-            return res.json({ received: true });
-        }
+            // ================= CREATE SUBSCRIPTION =================
 
-        // ================= CREATE SUBSCRIPTION =================
+            if (action === "createSubscription") {
 
-        if (action === "createSubscription") {
+                const token = req.headers.authorization?.split(" ")[1];
 
-            const token = req.headers.authorization?.split(" ")[1];
+                const { data: { user } } = await supabase.auth.getUser(token);
 
-            const { data: { user } } = await supabase.auth.getUser(token);
+                const session = await stripe.checkout.sessions.create({
+                    mode: "subscription",
 
-            const session = await stripe.checkout.sessions.create({
-                mode: "subscription",
+                    line_items: [
+                        {
+                            price: "price_xxx", // ID do Stripe
+                            quantity: 1
+                        }
+                    ],
 
-                line_items: [
-                    {
-                        price: "price_xxx", // ID do Stripe
-                        quantity: 1
+                    success_url: `${process.env.BASE_URL}/?success=true`,
+                    cancel_url: `${process.env.BASE_URL}/?cancel=true`,
+
+                    metadata: {
+                        user_id: user.id
                     }
-                ],
+                });
 
-                success_url: `${process.env.BASE_URL}/?success=true`,
-                cancel_url: `${process.env.BASE_URL}/?cancel=true`,
+                return res.json({ url: session.url });
+            }
 
-                metadata: {
-                    user_id: user.id
-                }
-            });
+            return res.json({ ok: true });
 
-            return res.json({ url: session.url });
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro interno" });
         }
-
-        return res.json({ ok: true });
-
-    } catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Erro interno" });
     }
-}
