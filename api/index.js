@@ -20,11 +20,16 @@ export default async function handler(req, res) {
         async function getUserFromToken(token) {
             if (!token) return null;
 
-            const { data: user } = await supabase
+            const { data: user, error } = await supabase
                 .from("users")
                 .select("*")
                 .eq("token", token)
-                .single();
+                .maybeSingle();
+
+            if (error) {
+                console.error("TOKEN ERROR:", error);
+                return null;
+            }
 
             return user || null;
         }
@@ -216,6 +221,24 @@ export default async function handler(req, res) {
                 .eq("id", id);
 
             return res.json({ ok: true });
+        }
+
+        if (action === "myAds") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+            const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { data } = await supabase
+                .from("ads")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false });
+
+            return res.json(data);
         }
 
         return res.status(400).json({ error: "Ação inválida" });

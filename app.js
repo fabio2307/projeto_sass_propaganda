@@ -50,7 +50,11 @@ async function login() {
         const data = await safeJson(res);
 
         setToken(data.token);
-        await init();
+
+        // pequeno delay garante persistência
+        setTimeout(() => {
+            init();
+        }, 100);
 
     } catch (err) {
         alert(err.message);
