@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                 .eq("id", user.id);
 
             return res.json({
-                token: newToken
+                token: user.token
             });
         }
 

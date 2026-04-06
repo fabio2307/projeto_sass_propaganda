@@ -21,7 +21,8 @@ async function safeJson(res) {
 
 // ================= TOKEN =================
 function getToken() {
-    return localStorage.getItem("token");
+    const token = localStorage.getItem("token");
+    return token ? token : null;
 }
 
 function setToken(token) {
@@ -165,9 +166,9 @@ async function criarAd() {
 async function carregarAds() {
     try {
         const res = await fetch(`${API}?action=myAds`, {
-            headers: {
+            headers: getToken() ? {
                 Authorization: "Bearer " + getToken()
-            }
+            } : {}
         });
 
         const ads = await safeJson(res);
