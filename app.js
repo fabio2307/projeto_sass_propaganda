@@ -37,7 +37,6 @@ function logout() {
 // ================= LOGIN =================
 async function login() {
     try {
-        console.log("TOKEN:", getToken());
         const res = await fetch(`${API}?action=login`, {
             method: "POST",
             headers: {
@@ -55,9 +54,13 @@ async function login() {
             throw new Error("Token não recebido");
         }
 
-        setToken(data.token);
+        // 🔥 SALVA
+        localStorage.setItem("token", data.token);
 
-        // 🚀 chama direto (SEM timeout)
+        // 🔥 DEBUG REAL
+        console.log("TOKEN SALVO:", localStorage.getItem("token"));
+
+        // 🚀 AGORA SIM
         await init();
 
     } catch (err) {
@@ -90,6 +93,14 @@ async function register() {
 
 // ================= INIT =================
 async function init() {
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        console.log("❌ INIT BLOQUEADO - sem token");
+        return;
+    }
+
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("dashboard").classList.remove("hidden");
 
@@ -100,43 +111,22 @@ async function init() {
 // ================= SALDO =================
 async function carregarSaldo() {
     try {
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            throw new Error("Sem token");
+        }
+
         const res = await fetch(`${API}?action=getUser`, {
             headers: {
-                Authorization: "Bearer " + getToken()
+                Authorization: "Bearer " + token
             }
         });
 
         const data = await safeJson(res);
 
         document.getElementById("saldo").innerText = data.balance || 0;
-
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-// ================= PAGAMENTO =================
-async function pagar() {
-    try {
-        const valor = Number(document.getElementById("valor").value);
-
-        if (!valor || valor <= 0) {
-            alert("Digite um valor válido");
-            return;
-        }
-
-        const res = await fetch(`${API}?action=createCheckout`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + getToken()
-            },
-            body: JSON.stringify({ amount: valor })
-        });
-
-        const data = await safeJson(res);
-
-        window.location.href = data.url;
 
     } catch (err) {
         alert(err.message);
