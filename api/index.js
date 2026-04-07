@@ -16,6 +16,19 @@ export default async function handler(req, res) {
 
     try {
 
+        function extractToken(req) {
+            const authHeader =
+                req.headers.authorization ||
+                req.headers.Authorization ||
+                "";
+
+            console.log("AUTH HEADER:", authHeader);
+
+            if (!authHeader.startsWith("Bearer ")) return null;
+
+            return authHeader.split(" ")[1];
+        }
+
         // ================= HELPERS =================
         async function getUserFromToken(token) {
             if (!token) return null;
@@ -124,17 +137,7 @@ export default async function handler(req, res) {
         // ================= GET USER =================
         if (action === "getUser") {
 
-            const authHeader =
-                req.headers.authorization ||
-                req.headers.Authorization ||
-                "";
-
-            const token = authHeader.startsWith("Bearer ")
-                ? authHeader.split(" ")[1]
-                : null;
-
-            console.log("HEADER:", authHeader);
-            console.log("TOKEN EXTRAÍDO:", token);
+            const token = extractToken(req);
 
             console.log("TOKEN GETUSER:", token);
 
@@ -252,7 +255,7 @@ export default async function handler(req, res) {
         // ================= CREATE CHECKOUT =================
         if (action === "createCheckout") {
 
-            const token = req.headers.authorization?.split(" ")[1];
+            const token = extractToken(req);
             const user = await getUserFromToken(token);
 
             if (!user) {
@@ -261,42 +264,30 @@ export default async function handler(req, res) {
 
             const { amount } = req.body;
 
-            if (!amount || isNaN(amount) || amount <= 0) {
+            if (!amount || amount <= 0) {
                 return res.status(400).json({ error: "Valor inválido" });
             }
 
-            try {
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ["card"],
+                mode: "payment",
+                line_items: [{
+                    price_data: {
+                        currency: "brl",
+                        product_data: { name: "Adicionar saldo" },
+                        unit_amount: Math.round(amount * 100)
+                    },
+                    quantity: 1
+                }],
+                success_url: `${process.env.BASE_URL}?success=true`,
+                cancel_url: `${process.env.BASE_URL}?cancel=true`,
+                metadata: {
+                    user_id: user.id,
+                    amount: String(amount)
+                }
+            });
 
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card"],
-                    mode: "payment",
-
-                    line_items: [{
-                        price_data: {
-                            currency: "brl",
-                            product_data: {
-                                name: "Adicionar saldo"
-                            },
-                            unit_amount: Math.round(amount * 100)
-                        },
-                        quantity: 1
-                    }],
-
-                    success_url: `${process.env.BASE_URL}?success=true`,
-                    cancel_url: `${process.env.BASE_URL}?cancel=true`,
-
-                    metadata: {
-                        user_id: user.id,
-                        amount: String(amount)
-                    }
-                });
-
-                return res.json({ url: session.url });
-
-            } catch (err) {
-                console.error("STRIPE ERROR:", err);
-                return res.status(500).json({ error: "Erro no pagamento" });
-            }
+            return res.json({ url: session.url });
         }
 
         return res.status(400).json({ error: "Ação inválida" });

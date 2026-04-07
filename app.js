@@ -1,11 +1,10 @@
-const API = "/api";
+const API = "https://projeto-sass-propaganda.vercel.app/api";
 
 // ================= SAFE JSON =================
 async function safeJson(res) {
     const text = await res.text();
 
     let data;
-
     try {
         data = JSON.parse(text);
     } catch {
@@ -50,41 +49,13 @@ async function login() {
 
         const data = await safeJson(res);
 
-        if (!data.token) {
-            throw new Error("Token não recebido");
-        }
+        if (!data.token) throw new Error("Token não recebido");
 
-        // 🔥 SALVA
-        localStorage.setItem("token", data.token);
+        setToken(data.token);
 
-        // 🔥 DEBUG REAL
-        console.log("TOKEN SALVO:", localStorage.getItem("token"));
+        console.log("TOKEN SALVO:", getToken());
 
-        // 🚀 AGORA SIM
         await init();
-
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-// ================= REGISTER =================
-async function register() {
-    try {
-        const res = await fetch(`${API}?action=register`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
-            })
-        });
-
-        await safeJson(res);
-
-        alert("Conta criada! Agora faça login.");
 
     } catch (err) {
         alert(err.message);
@@ -93,11 +64,10 @@ async function register() {
 
 // ================= INIT =================
 async function init() {
-
-    const token = localStorage.getItem("token");
+    const token = getToken();
 
     if (!token) {
-        console.log("❌ INIT BLOQUEADO - sem token");
+        console.log("❌ Sem token");
         return;
     }
 
@@ -111,16 +81,11 @@ async function init() {
 // ================= SALDO =================
 async function carregarSaldo() {
     try {
-
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            throw new Error("Sem token");
-        }
+        console.log("TOKEN ENVIADO:", getToken());
 
         const res = await fetch(`${API}?action=getUser`, {
             headers: {
-                Authorization: "Bearer " + token
+                Authorization: `Bearer ${getToken()}`
             }
         });
 
@@ -133,40 +98,13 @@ async function carregarSaldo() {
     }
 }
 
-// ================= CRIAR AD =================
-async function criarAd() {
-    try {
-        const res = await fetch(`${API}?action=createAd`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + getToken()
-            },
-            body: JSON.stringify({
-                title: document.getElementById("title").value,
-                description: document.getElementById("description").value,
-                link: document.getElementById("link").value,
-                bid: Number(document.getElementById("bid").value)
-            })
-        });
-
-        const data = await safeJson(res);
-
-        alert("Anúncio criado!");
-        await carregarAds();
-
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-// ================= LISTAR ADS =================
+// ================= ADS =================
 async function carregarAds() {
     try {
         const res = await fetch(`${API}?action=myAds`, {
-            headers: getToken() ? {
-                Authorization: "Bearer " + getToken()
-            } : {}
+            headers: {
+                Authorization: `Bearer ${getToken()}`
+            }
         });
 
         const ads = await safeJson(res);
@@ -179,90 +117,7 @@ async function carregarAds() {
     }
 }
 
-// ================= CLICAR AD =================
-async function clicarAd(id) {
-    try {
-        const res = await fetch(`/api?action=clickAd`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id })
-        });
-
-        const data = await res.json();
-
-        if (!data.ok) {
-            alert("Saldo insuficiente — anúncio pausado");
-        }
-
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-// ================= ADS PÚBLICOS =================
-async function carregarAdsPublicos() {
-    try {
-        const res = await fetch(`/api?action=listPublicAds`);
-        const ads = await res.json();
-
-        const container = document.getElementById("ads");
-        container.innerHTML = "";
-
-        ads.forEach(ad => {
-
-            // contar view
-            fetch(`/api?action=viewAd`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: ad.id })
-            });
-
-            container.innerHTML += `
-                <div class="card">
-                    <h3>${ad.title}</h3>
-                    <p>${ad.description}</p>
-                    <a href="${ad.link}" target="_blank"
-                       onclick="clicarAd('${ad.id}')">
-                       Acessar
-                    </a>
-                </div>
-            `;
-        });
-
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-// ================= RENDER ADS =================
-function renderAds(ads) {
-    const container = document.getElementById("ads");
-    container.innerHTML = "";
-
-    ads.forEach(ad => {
-
-        const ctr = ad.views > 0
-            ? ((ad.clicks / ad.views) * 100).toFixed(2)
-            : 0;
-
-        container.innerHTML += `
-            <div class="card">
-                <h3>${ad.title}</h3>
-
-                <p>💰 Bid: R$ ${ad.bid}</p>
-                <p>👁️ Views: ${ad.views}</p>
-                <p>🖱️ Cliques: ${ad.clicks}</p>
-                <p>📊 CTR: ${ctr}%</p>
-
-                <a href="${ad.link}" target="_blank">
-                    Ver anúncio
-                </a>
-            </div>
-        `;
-    });
-}
-
-// ================= PAGAR =================
+// ================= PAGAMENTO =================
 async function pagar() {
     try {
         const amount = Number(document.getElementById("amount").value);
@@ -275,18 +130,13 @@ async function pagar() {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: "Bearer " + getToken()
+                Authorization: `Bearer ${getToken()}`
             },
             body: JSON.stringify({ amount })
         });
 
         const data = await safeJson(res);
 
-        if (!data.url) {
-            throw new Error("Erro ao gerar pagamento");
-        }
-
-        // 🔥 REDIRECIONA PRO STRIPE
         window.location.href = data.url;
 
     } catch (err) {
@@ -294,43 +144,9 @@ async function pagar() {
     }
 }
 
-// ================= STATS =================
-function atualizarStats(ads) {
-    const totalClicks = ads.reduce((sum, ad) => sum + ad.clicks, 0);
-    const totalViews = ads.reduce((sum, ad) => sum + ad.views, 0);
-
-    document.getElementById("totalClicks").innerText = totalClicks;
-    document.getElementById("totalViews").innerText = totalViews;
-    document.getElementById("totalAds").innerText = ads.length;
-}
-
-// ================= INIT AUTO =================
-window.onload = () => {
-    if (getToken()) {
-        init();
-    }
-};
-
-// ================= DEBUG =================
-console.log({
-    title: document.getElementById("title").value,
-    description: document.getElementById("description").value,
-    link: document.getElementById("link").value,
-    bid: Number(document.getElementById("bid").value)
-});
-
-// ================= EXPORT GLOBAL =================
+// ================= EXPORT =================
 window.login = login;
-window.register = register;
-window.criarAd = criarAd;
 window.pagar = pagar;
-window.clicarAd = clicarAd;
-window.carregarAdsPublicos = carregarAdsPublicos;
-window.renderAds = renderAds;
-window.atualizarStats = atualizarStats;
+window.carregarAds = carregarAds;
 window.logout = logout;
 window.init = init;
-window.getToken = getToken;
-window.setToken = setToken;
-window.safeJson = safeJson;
-window.pagar = pagar;
