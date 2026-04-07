@@ -144,9 +144,33 @@ async function pagar() {
     }
 }
 
+async function getUserFromToken(token) {
+    if (!token) {
+        console.log("❌ TOKEN VAZIO");
+        return null;
+    }
+
+    console.log("🔍 BUSCANDO TOKEN:", token);
+
+    const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("token", token);
+
+    console.log("📦 RESULTADO QUERY:", data);
+
+    if (error) {
+        console.error("❌ ERRO SUPABASE:", error);
+        return null;
+    }
+
+    return data && data.length > 0 ? data[0] : null;
+}
+
 // ================= EXPORT =================
 window.login = login;
 window.pagar = pagar;
 window.carregarAds = carregarAds;
 window.logout = logout;
 window.init = init;
+window.getUserFromToken = getUserFromToken;
