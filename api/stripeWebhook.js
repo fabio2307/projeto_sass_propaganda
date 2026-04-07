@@ -10,6 +10,10 @@ export const config = {
 
 export default async function handler(req, res) {
 
+    if (req.method !== "POST") {
+        return res.status(405).send("Método não permitido");
+    }
+
     const sig = req.headers['stripe-signature'];
 
     let event;
@@ -24,9 +28,11 @@ export default async function handler(req, res) {
         );
 
     } catch (err) {
+        console.error("WEBHOOK ERROR:", err.message);
         return res.status(400).send("Erro webhook");
     }
 
+    // ================= PAGAMENTO CONCLUÍDO =================
     if (event.type === 'checkout.session.completed') {
 
         const session = event.data.object;
@@ -37,13 +43,17 @@ export default async function handler(req, res) {
         );
 
         const userId = session.metadata.user_id;
-        const amount = session.amount_total / 100;
+        const amount = Number(session.metadata.amount);
+
+        if (!userId || !amount) return;
 
         const { data: user } = await supabase
             .from("users")
             .select("balance")
             .eq("id", userId)
             .single();
+
+        if (!user) return;
 
         await supabase
             .from("users")
@@ -55,9 +65,10 @@ export default async function handler(req, res) {
         await supabase.from("transactions").insert({
             user_id: userId,
             amount: amount,
-            type: "deposit"
+            type: "deposit",
+            status: "completed"
         });
     }
 
-    res.json({ received: true });
+    return res.json({ received: true });
 }

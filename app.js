@@ -117,6 +117,11 @@ async function pagar() {
     try {
         const valor = Number(document.getElementById("valor").value);
 
+        if (!valor || valor <= 0) {
+            alert("Digite um valor válido");
+            return;
+        }
+
         const res = await fetch(`${API}?action=createCheckout`, {
             method: "POST",
             headers: {

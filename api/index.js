@@ -108,7 +108,7 @@ export default async function handler(req, res) {
                 .eq("id", user.id);
 
             return res.json({
-                token: user.token
+                token: newToken
             });
         }
 
@@ -141,22 +141,8 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid } = req.body;
 
-            if (!title || !link || !bid) {
+            if (!title || !link || !bid || isNaN(bid)) {
                 return res.status(400).json({ error: "Dados inválidos" });
-            }
-
-            if (user.plan === "free") {
-
-                const { count } = await supabase
-                    .from("ads")
-                    .select("*", { count: "exact", head: true })
-                    .eq("user_id", user.id);
-
-                if (count >= 5) {
-                    return res.status(403).json({
-                        error: "Limite FREE: 5 anúncios"
-                    });
-                }
             }
 
             const { error } = await supabase
@@ -164,12 +150,12 @@ export default async function handler(req, res) {
                 .insert([{
                     user_id: user.id,
                     title,
-                    description,
+                    description: description || "",
                     link,
-                    bid,
+                    bid: Number(bid),
                     clicks: 0,
                     views: 0,
-                    active: true
+                    active: true // ⚠️ só funciona se existir no banco
                 }]);
 
             if (error) {
@@ -240,6 +226,56 @@ export default async function handler(req, res) {
                 .order("created_at", { ascending: false });
 
             return res.json(data);
+        }
+
+        // ================= CREATE CHECKOUT =================
+        if (action === "createCheckout") {
+
+            const token = req.headers.authorization?.split(" ")[1];
+            const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { amount } = req.body;
+
+            if (!amount || isNaN(amount) || amount <= 0) {
+                return res.status(400).json({ error: "Valor inválido" });
+            }
+
+            try {
+
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ["card"],
+                    mode: "payment",
+
+                    line_items: [{
+                        price_data: {
+                            currency: "brl",
+                            product_data: {
+                                name: "Adicionar saldo"
+                            },
+                            unit_amount: Math.round(amount * 100)
+                        },
+                        quantity: 1
+                    }],
+
+                    success_url: `${process.env.BASE_URL}?success=true`,
+                    cancel_url: `${process.env.BASE_URL}?cancel=true`,
+
+                    metadata: {
+                        user_id: user.id,
+                        amount: String(amount)
+                    }
+                });
+
+                return res.json({ url: session.url });
+
+            } catch (err) {
+                console.error("STRIPE ERROR:", err);
+                return res.status(500).json({ error: "Erro no pagamento" });
+            }
         }
 
         return res.status(400).json({ error: "Ação inválida" });
