@@ -33,6 +33,35 @@ function logout() {
     location.reload();
 }
 
+// ================= REGISTER =================
+async function register() {
+    try {
+        const res = await fetch(`${API}?action=register`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: document.getElementById("email").value,
+                password: document.getElementById("password").value
+            })
+        });
+
+        const data = await safeJson(res);
+
+        if (!data.token) throw new Error("Erro ao cadastrar");
+
+        setToken(data.token);
+
+        console.log("TOKEN REGISTER:", data.token);
+
+        await init();
+
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
 // ================= LOGIN =================
 async function login() {
     try {
@@ -53,7 +82,7 @@ async function login() {
 
         setToken(data.token);
 
-        console.log("TOKEN SALVO:", getToken());
+        console.log("TOKEN LOGIN:", getToken());
 
         await init();
 
@@ -81,11 +110,13 @@ async function init() {
 // ================= SALDO =================
 async function carregarSaldo() {
     try {
-        console.log("TOKEN ENVIADO:", getToken());
+        const token = getToken();
+
+        console.log("TOKEN ENVIADO:", token);
 
         const res = await fetch(`${API}?action=getUser`, {
             headers: {
-                Authorization: `Bearer ${getToken()}`
+                Authorization: `Bearer ${token}`
             }
         });
 
@@ -144,33 +175,10 @@ async function pagar() {
     }
 }
 
-async function getUserFromToken(token) {
-    if (!token) {
-        console.log("❌ TOKEN VAZIO");
-        return null;
-    }
-
-    console.log("🔍 BUSCANDO TOKEN:", token);
-
-    const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("token", token);
-
-    console.log("📦 RESULTADO QUERY:", data);
-
-    if (error) {
-        console.error("❌ ERRO SUPABASE:", error);
-        return null;
-    }
-
-    return data && data.length > 0 ? data[0] : null;
-}
-
 // ================= EXPORT =================
 window.login = login;
+window.register = register;
 window.pagar = pagar;
-window.carregarAds = carregarAds;
 window.logout = logout;
 window.init = init;
-window.getUserFromToken = getUserFromToken;
+window.carregarAds = carregarAds;

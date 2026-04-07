@@ -14,38 +14,48 @@ export default async function handler(req, res) {
 
     const { action } = req.query;
 
+    function extractToken(req) {
+        const authHeader =
+            req.headers.authorization ||
+            req.headers.Authorization ||
+            "";
+
+        console.log("AUTH HEADER:", authHeader);
+
+        if (!authHeader.startsWith("Bearer ")) return null;
+
+        return authHeader.split(" ")[1];
+    }
+
+    async function getUserFromToken(token) {
+        if (!token) {
+            console.log("❌ TOKEN VAZIO");
+            return null;
+        }
+
+        console.log("🔍 BUSCANDO TOKEN:", token);
+
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("token", token)
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.error("❌ ERRO TOKEN:", error);
+            return null;
+        }
+
+        if (!data) {
+            console.log("❌ TOKEN NÃO ENCONTRADO");
+            return null;
+        }
+
+        return data;
+    }
+
     try {
-
-        function extractToken(req) {
-            const authHeader =
-                req.headers.authorization ||
-                req.headers.Authorization ||
-                "";
-
-            console.log("AUTH HEADER:", authHeader);
-
-            if (!authHeader.startsWith("Bearer ")) return null;
-
-            return authHeader.split(" ")[1];
-        }
-
-        // ================= HELPERS =================
-        async function getUserFromToken(token) {
-            if (!token) return null;
-
-            const { data: user, error } = await supabase
-                .from("users")
-                .select("*")
-                .eq("token", token)
-                .maybeSingle();
-
-            if (error) {
-                console.error("TOKEN ERROR:", error);
-                return null;
-            }
-
-            return user || null;
-        }
 
         // ================= REGISTER =================
         if (action === "register") {
@@ -56,7 +66,6 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
-            // verificar se já existe
             const { data: existingUser } = await supabase
                 .from("users")
                 .select("id")
@@ -64,13 +73,10 @@ export default async function handler(req, res) {
                 .maybeSingle();
 
             if (existingUser) {
-                return res.status(400).json({
-                    error: "Email já cadastrado"
-                });
+                return res.status(400).json({ error: "Email já cadastrado" });
             }
 
             const hash = await bcrypt.hash(password, 10);
-
             const token = crypto.randomUUID();
 
             const { error } = await supabase
@@ -88,7 +94,7 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Erro ao criar conta" });
             }
 
-            return res.json({ ok: true });
+            return res.json({ token });
         }
 
         // ================= LOGIN =================
@@ -96,16 +102,11 @@ export default async function handler(req, res) {
 
             const { email, password } = req.body;
 
-            const { data: user, error: userError } = await supabase
+            const { data: user } = await supabase
                 .from("users")
                 .select("*")
                 .eq("email", email)
                 .maybeSingle();
-
-            if (userError) {
-                console.error("ERRO AO BUSCAR USER:", userError);
-                return res.status(500).json({ error: "Erro interno" });
-            }
 
             if (!user) {
                 return res.status(401).json({ error: "Login inválido" });
@@ -119,27 +120,20 @@ export default async function handler(req, res) {
 
             const newToken = crypto.randomUUID();
 
-            const { error: updateError } = await supabase
+            await supabase
                 .from("users")
                 .update({ token: newToken })
                 .eq("id", user.id);
 
-            if (updateError) {
-                console.error("ERRO AO ATUALIZAR TOKEN:", updateError);
-                return res.status(500).json({ error: "Erro ao gerar sessão" });
-            }
+            console.log("✅ NOVO TOKEN:", newToken);
 
-            return res.json({
-                token: newToken
-            });
+            return res.json({ token: newToken });
         }
 
         // ================= GET USER =================
         if (action === "getUser") {
 
             const token = extractToken(req);
-
-            console.log("TOKEN GETUSER:", token);
 
             const user = await getUserFromToken(token);
 
@@ -153,90 +147,10 @@ export default async function handler(req, res) {
             });
         }
 
-        // ================= CREATE AD =================
-        if (action === "createAd") {
-
-            const token = req.headers.authorization?.split(" ")[1];
-            const user = await getUserFromToken(token);
-
-            if (!user) {
-                return res.status(401).json({ error: "Não autorizado" });
-            }
-
-            const { title, description, link, bid } = req.body;
-
-            if (!title || !link || !bid || isNaN(bid)) {
-                return res.status(400).json({ error: "Dados inválidos" });
-            }
-
-            const { error } = await supabase
-                .from("ads")
-                .insert([{
-                    user_id: user.id,
-                    title,
-                    description: description || "",
-                    link,
-                    bid: Number(bid),
-                    clicks: 0,
-                    views: 0,
-                    active: true // ⚠️ só funciona se existir no banco
-                }]);
-
-            if (error) {
-                console.error("SUPABASE ERROR:", error);
-                return res.status(400).json({ error: error.message });
-            }
-
-            return res.json({ ok: true });
-        }
-
-        // ================= CLICK AD =================
-        if (action === "clickAd") {
-
-            const { id } = req.body;
-
-            const { data: ad } = await supabase
-                .from("ads")
-                .select("*")
-                .eq("id", id)
-                .single();
-
-            if (!ad || !ad.active) {
-                return res.status(400).json({ error: "Anúncio inválido" });
-            }
-
-            const { data: user } = await supabase
-                .from("users")
-                .select("*")
-                .eq("id", ad.user_id)
-                .single();
-
-            if (user.balance < ad.bid) {
-                await supabase
-                    .from("ads")
-                    .update({ active: false })
-                    .eq("id", id);
-
-                return res.json({ ok: false });
-            }
-
-            // atualização segura
-            await supabase
-                .from("users")
-                .update({ balance: user.balance - ad.bid })
-                .eq("id", user.id);
-
-            await supabase
-                .from("ads")
-                .update({ clicks: ad.clicks + 1 })
-                .eq("id", id);
-
-            return res.json({ ok: true });
-        }
-
+        // ================= MY ADS =================
         if (action === "myAds") {
 
-            const token = req.headers.authorization?.split(" ")[1];
+            const token = extractToken(req);
             const user = await getUserFromToken(token);
 
             if (!user) {
