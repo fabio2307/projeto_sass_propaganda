@@ -82,9 +82,12 @@ async function login() {
 
         setToken(data.token);
 
+        await new Promise(r => setTimeout(r, 300)); // 🔥 importante
+
         console.log("TOKEN LOGIN:", getToken());
 
         await init();
+
 
     } catch (err) {
         alert(err.message);

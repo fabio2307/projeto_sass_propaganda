@@ -118,14 +118,17 @@ export default async function handler(req, res) {
 
             const newToken = crypto.randomUUID();
 
-            await supabase
+            const { error: updateError } = await supabase
                 .from("users")
                 .update({ token: newToken })
-                .eq("id", user.id);
+                .eq("id", user.id)
+                .select()
+                .single();
 
-            console.log("✅ NOVO TOKEN:", newToken);
-
-            return res.json({ token: newToken });
+            if (updateError) {
+                console.error("ERRO UPDATE TOKEN:", updateError);
+                return res.status(500).json({ error: "Erro ao atualizar token" });
+            }
         }
 
         // ================= GET USER =================
@@ -134,6 +137,8 @@ export default async function handler(req, res) {
             const token = extractToken(req);
 
             const user = await getUserFromToken(token);
+
+            console.log("TOKEN RECEBIDO:", token);
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
