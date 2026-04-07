@@ -262,6 +262,38 @@ function renderAds(ads) {
     });
 }
 
+// ================= PAGAR =================
+async function pagar() {
+    try {
+        const amount = Number(document.getElementById("amount").value);
+
+        if (!amount || amount <= 0) {
+            throw new Error("Valor inválido");
+        }
+
+        const res = await fetch(`${API}?action=createCheckout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + getToken()
+            },
+            body: JSON.stringify({ amount })
+        });
+
+        const data = await safeJson(res);
+
+        if (!data.url) {
+            throw new Error("Erro ao gerar pagamento");
+        }
+
+        // 🔥 REDIRECIONA PRO STRIPE
+        window.location.href = data.url;
+
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
 // ================= STATS =================
 function atualizarStats(ads) {
     const totalClicks = ads.reduce((sum, ad) => sum + ad.clicks, 0);
@@ -298,3 +330,7 @@ window.renderAds = renderAds;
 window.atualizarStats = atualizarStats;
 window.logout = logout;
 window.init = init;
+window.getToken = getToken;
+window.setToken = setToken;
+window.safeJson = safeJson;
+window.pagar = pagar;

@@ -124,7 +124,17 @@ export default async function handler(req, res) {
         // ================= GET USER =================
         if (action === "getUser") {
 
-            const token = req.headers.authorization?.split(" ")[1];
+            const authHeader =
+                req.headers.authorization ||
+                req.headers.Authorization ||
+                "";
+
+            const token = authHeader.startsWith("Bearer ")
+                ? authHeader.split(" ")[1]
+                : null;
+
+            console.log("HEADER:", authHeader);
+            console.log("TOKEN EXTRAÍDO:", token);
 
             console.log("TOKEN GETUSER:", token);
 
