@@ -80,7 +80,6 @@ export default async function handler(req, res) {
 
         // ================= LOGIN =================
         if (action === "login") {
-            console.log("TOKEN RECEBIDO:", token);
 
             const { email, password } = req.body;
 
@@ -105,10 +104,8 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Login inválido" });
             }
 
-            // 🔐 gera novo token
             const newToken = crypto.randomUUID();
 
-            // 🔥 atualização segura
             const { error: updateError } = await supabase
                 .from("users")
                 .update({ token: newToken })
@@ -119,11 +116,9 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: "Erro ao gerar sessão" });
             }
 
-            // ✅ retorna o token correto
             return res.json({
                 token: newToken
             });
-            
         }
 
         // ================= GET USER =================
