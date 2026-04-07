@@ -126,6 +126,8 @@ export default async function handler(req, res) {
 
             const token = req.headers.authorization?.split(" ")[1];
 
+            console.log("TOKEN GETUSER:", token);
+
             const user = await getUserFromToken(token);
 
             if (!user) {
