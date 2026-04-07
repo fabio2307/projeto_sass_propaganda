@@ -33,24 +33,22 @@ export default async function handler(req, res) {
             return null;
         }
 
-        console.log("🔍 BUSCANDO TOKEN:", token);
+        const cleanToken = token.trim();
+
+        console.log("🔍 TOKEN RECEBIDO:", cleanToken);
 
         const { data, error } = await supabase
             .from("users")
             .select("*")
-            .eq("token", token)
-            .limit(1)
-            .maybeSingle();
+            .eq("token", cleanToken)
+            .single();
 
         if (error) {
             console.error("❌ ERRO TOKEN:", error);
             return null;
         }
 
-        if (!data) {
-            console.log("❌ TOKEN NÃO ENCONTRADO");
-            return null;
-        }
+        console.log("✅ USER:", data?.id);
 
         return data;
     }

@@ -129,6 +129,24 @@ async function carregarSaldo() {
     }
 }
 
+// ================= API =================
+function renderAds(ads) {
+    const container = document.getElementById("adsList");
+
+    if (!container) return;
+
+    container.innerHTML = ads.map(ad => `
+        <div>
+            <strong>${ad.title}</strong><br>
+            ${ad.description || ""}
+        </div>
+    `).join("");
+}
+
+function atualizarStats(ads) {
+    console.log("Ads:", ads.length);
+}
+
 // ================= ADS =================
 async function carregarAds() {
     try {
