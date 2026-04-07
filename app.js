@@ -22,7 +22,7 @@ async function safeJson(res) {
 // ================= TOKEN =================
 function getToken() {
     const token = localStorage.getItem("token");
-    return token ? token : null;
+    return token && token !== "undefined" ? token : null;
 }
 
 function setToken(token) {
@@ -37,6 +37,7 @@ function logout() {
 // ================= LOGIN =================
 async function login() {
     try {
+        console.log("TOKEN:", getToken());
         const res = await fetch(`${API}?action=login`, {
             method: "POST",
             headers: {
@@ -50,12 +51,14 @@ async function login() {
 
         const data = await safeJson(res);
 
+        if (!data.token) {
+            throw new Error("Token não recebido");
+        }
+
         setToken(data.token);
 
-        // pequeno delay garante persistência
-        setTimeout(() => {
-            init();
-        }, 100);
+        // 🚀 chama direto (SEM timeout)
+        await init();
 
     } catch (err) {
         alert(err.message);
