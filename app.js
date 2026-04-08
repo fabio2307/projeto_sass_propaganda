@@ -82,9 +82,8 @@ async function login() {
 
         setToken(data.token);
 
-        await new Promise(r => setTimeout(r, 300)); // 🔥 importante
-
-        console.log("TOKEN LOGIN:", getToken());
+        // 🔥 evita problema de sincronização
+        await new Promise(r => setTimeout(r, 300));
 
         await init();
 

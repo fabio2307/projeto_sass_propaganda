@@ -121,14 +121,16 @@ export default async function handler(req, res) {
             const { error: updateError } = await supabase
                 .from("users")
                 .update({ token: newToken })
-                .eq("id", user.id)
-                .select()
-                .single();
+                .eq("id", user.id);
 
             if (updateError) {
-                console.error("ERRO UPDATE TOKEN:", updateError);
+                console.error("❌ ERRO UPDATE TOKEN:", updateError);
                 return res.status(500).json({ error: "Erro ao atualizar token" });
             }
+
+            console.log("✅ TOKEN ATUALIZADO:", newToken);
+
+            return res.json({ token: newToken });
         }
 
         // ================= GET USER =================
