@@ -162,10 +162,11 @@ async function criarAd() {
         const description = document.getElementById("description").value;
         const link = document.getElementById("link").value;
         const bid = Number(document.getElementById("bid").value);
+        console.log({ title, description, link, bid });
 
         if (!title || !link || isNaN(bid) || bid <= 0) {
-    throw new Error("Preencha os campos corretamente");
-}
+            throw new Error("Preencha os campos corretamente");
+        }
 
         const res = await fetch(`${API}?action=createAd`, {
             method: "POST",
