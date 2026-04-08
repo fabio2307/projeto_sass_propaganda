@@ -156,7 +156,7 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid } = req.body;
 
-            if (!title || !link || !bid) {
+            if (!title || !link || bid === undefined || bid === null || bid <= 0) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
