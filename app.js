@@ -24,13 +24,27 @@ function getToken() {
     return token && token !== "undefined" ? token : null;
 }
 
+// ================= TOKEN =================
 function setToken(token) {
     localStorage.setItem("token", token);
 }
 
+// ================= LOGOUT =================
 function logout() {
     localStorage.clear();
     location.reload();
+}
+
+// ================= LOGIN/REGISTER =================
+function showRegister() {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("registerBox").classList.remove("hidden");
+}
+
+// ================= LOGIN/REGISTER =================
+function showLogin() {
+    document.getElementById("registerBox").classList.add("hidden");
+    document.getElementById("loginBox").classList.remove("hidden");
 }
 
 // ================= REGISTER =================
@@ -42,20 +56,18 @@ async function register() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
+                name: document.getElementById("registerName").value,
+                age: Number(document.getElementById("registerAge").value),
+                email: document.getElementById("registerEmail").value,
+                password: document.getElementById("registerPassword").value
             })
         });
 
-        const data = await safeJson(res);
+        await safeJson(res);
 
-        if (!data.token) throw new Error("Erro ao cadastrar");
+        alert("Conta criada com sucesso!");
 
-        setToken(data.token);
-
-        console.log("TOKEN REGISTER:", data.token);
-
-        await init();
+        showLogin();
 
     } catch (err) {
         alert(err.message);
@@ -71,22 +83,16 @@ async function login() {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                email: document.getElementById("email").value,
-                password: document.getElementById("password").value
+                email: document.getElementById("loginEmail").value,
+                password: document.getElementById("loginPassword").value
             })
         });
 
         const data = await safeJson(res);
 
-        if (!data.token) throw new Error("Token não recebido");
-
         setToken(data.token);
 
-        // 🔥 evita problema de sincronização
-        await new Promise(r => setTimeout(r, 300));
-
         await init();
-
 
     } catch (err) {
         alert(err.message);
@@ -133,7 +139,7 @@ async function carregarSaldo() {
 
 // ================= API =================
 function renderAds(ads) {
-    const container = document.getElementById("adsList");
+    const container = document.getElementById("ads");
 
     if (!container) return;
 
@@ -202,3 +208,5 @@ window.pagar = pagar;
 window.logout = logout;
 window.init = init;
 window.carregarAds = carregarAds;
+window.showRegister = showRegister;
+window.showLogin = showLogin;

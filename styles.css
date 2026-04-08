@@ -110,3 +110,10 @@ button {
 .hidden {
   display: none;
 }
+
+.link {
+  color: #3b82f6;
+  cursor: pointer;
+  text-align: center;
+  font-size: 14px;
+}

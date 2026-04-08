@@ -58,9 +58,9 @@ export default async function handler(req, res) {
         // ================= REGISTER =================
         if (action === "register") {
 
-            const { email, password } = req.body;
+            const { name, age, email, password } = req.body;
 
-            if (!email || !password) {
+            if (!name || !email || !password) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
@@ -80,6 +80,8 @@ export default async function handler(req, res) {
             const { error } = await supabase
                 .from("users")
                 .insert([{
+                    name,
+                    age: age || null,
                     email,
                     password: hash,
                     token,
@@ -92,7 +94,7 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Erro ao criar conta" });
             }
 
-            return res.json({ token });
+            return res.json({ ok: true }); // 🔥 não loga mais automaticamente
         }
 
         // ================= LOGIN =================

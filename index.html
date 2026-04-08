@@ -1,78 +1,94 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <title>Ads SaaS</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-<!-- LOGIN -->
-<div class="center-box" id="loginBox">
-    <h2>Login</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Senha">
+    <!-- LOGIN -->
+    <div class="center-box" id="loginBox">
+        <h2>Login</h2>
 
-    <button onclick="login()">Entrar</button>
-    <button onclick="register()">Cadastrar</button>
-</div>
+        <input id="loginEmail" placeholder="Email">
+        <input id="loginPassword" type="password" placeholder="Senha">
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
-
-    <div class="topbar">
-        <h2>Dashboard</h2>
-        <button onclick="logout()">Sair</button>
+        <button onclick="login()">Entrar</button>
+        <p onclick="showRegister()" class="link">Criar conta</p>
     </div>
 
-    <!-- SALDO -->
-    <div class="saldo-box">
-        <h3>💰 Saldo: R$ <span id="saldo">0</span></h3>
+    <div class="center-box hidden" id="registerBox">
+        <h2>Cadastro</h2>
 
-        <input type="number" id="valor" placeholder="Valor para adicionar">
-        <button onclick="pagar()">Adicionar saldo</button>
+        <input id="registerName" placeholder="Nome">
+        <input id="registerAge" type="number" placeholder="Idade">
+        <input id="registerEmail" placeholder="Email">
+        <input id="registerPassword" type="password" placeholder="Senha">
+
+        <button onclick="register()">Cadastrar</button>
+        <p onclick="showLogin()" class="link">Já tenho conta</p>
     </div>
 
-    <!-- STATS -->
-    <div class="stats">
-        <div class="card">
-            <span>Total Ads</span>
-            <h3 id="totalAds">0</h3>
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="hidden">
+
+        <div class="topbar">
+            <h2>Dashboard</h2>
+            <button onclick="logout()">Sair</button>
         </div>
 
-        <div class="card">
-            <span>Cliques</span>
-            <h3 id="totalClicks">0</h3>
+        <!-- SALDO -->
+        <div class="saldo-box">
+            <h3>💰 Saldo: R$ <span id="saldo">0</span></h3>
+
+            <input type="number" id="valor" placeholder="Valor para adicionar">
+            <button onclick="pagar()">Adicionar saldo</button>
         </div>
 
-        <div class="card">
-            <span>Views</span>
-            <h3 id="totalViews">0</h3>
+        <!-- STATS -->
+        <div class="stats">
+            <div class="card">
+                <span>Total Ads</span>
+                <h3 id="totalAds">0</h3>
+            </div>
+
+            <div class="card">
+                <span>Cliques</span>
+                <h3 id="totalClicks">0</h3>
+            </div>
+
+            <div class="card">
+                <span>Views</span>
+                <h3 id="totalViews">0</h3>
+            </div>
         </div>
+
+        <div class="dashboard-content">
+
+            <!-- CRIAR ANÚNCIO -->
+            <div class="create-ad">
+                <h3>Cadastrar Produto / Anúncio</h3>
+
+                <input id="title" placeholder="Título do produto">
+                <input id="description" placeholder="Descrição">
+                <input id="link" placeholder="Link do produto">
+                <input id="bid" type="number" placeholder="Valor do lance">
+
+                <button onclick="criarAd()">Criar anúncio</button>
+            </div>
+
+            <!-- LISTA -->
+            <div class="ads" id="ads"></div>
+
+        </div>
+
     </div>
 
-    <div class="dashboard-content">
-
-        <!-- CRIAR ANÚNCIO -->
-        <div class="create-ad">
-            <h3>Cadastrar Produto / Anúncio</h3>
-
-            <input id="title" placeholder="Título do produto">
-            <input id="description" placeholder="Descrição">
-            <input id="link" placeholder="Link do produto">
-            <input id="bid" type="number" placeholder="Valor do lance">
-
-            <button onclick="criarAd()">Criar anúncio</button>
-        </div>
-
-        <!-- LISTA -->
-        <div class="ads" id="ads"></div>
-
-    </div>
-
-</div>
-
-<script src="./app.js"></script>
+    <script src="./app.js"></script>
 
 </body>
+
 </html>
