@@ -144,6 +144,42 @@ export default async function handler(req, res) {
             });
         }
 
+        // ================= CREATE AD =================
+        if (action === "createAd") {
+
+            const token = extractToken(req);
+            const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { title, description, link, bid } = req.body;
+
+            if (!title || !link || !bid) {
+                return res.status(400).json({ error: "Dados inválidos" });
+            }
+
+            const { error } = await supabase
+                .from("ads")
+                .insert([{
+                    user_id: user.id,
+                    title,
+                    description,
+                    link,
+                    bid,
+                    clicks: 0,
+                    views: 0
+                }]);
+
+            if (error) {
+                console.error(error);
+                return res.status(400).json({ error: "Erro ao criar anúncio" });
+            }
+
+            return res.json({ success: true });
+        }
+
         // ================= MY ADS =================
         if (action === "myAds") {
 

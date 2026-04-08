@@ -210,3 +210,4 @@ window.init = init;
 window.carregarAds = carregarAds;
 window.showRegister = showRegister;
 window.showLogin = showLogin;
+window.criarAd = criarAd;
