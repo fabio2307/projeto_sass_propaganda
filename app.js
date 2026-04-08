@@ -155,6 +155,49 @@ function atualizarStats(ads) {
     console.log("Ads:", ads.length);
 }
 
+// ================= CRIAR AD =================
+async function criarAd() {
+    try {
+        const title = document.getElementById("title").value;
+        const description = document.getElementById("description").value;
+        const link = document.getElementById("link").value;
+        const bid = Number(document.getElementById("bid").value);
+
+        if (!title || !link || !bid) {
+            throw new Error("Preencha os campos obrigatórios");
+        }
+
+        const res = await fetch(`${API}?action=createAd`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                link,
+                bid
+            })
+        });
+
+        await safeJson(res);
+
+        alert("Anúncio criado com sucesso 🚀");
+
+        // limpa campos
+        document.getElementById("title").value = "";
+        document.getElementById("description").value = "";
+        document.getElementById("link").value = "";
+        document.getElementById("bid").value = "";
+
+        await carregarAds();
+
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
 // ================= ADS =================
 async function carregarAds() {
     try {
