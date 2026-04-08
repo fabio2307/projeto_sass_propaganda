@@ -1,4 +1,4 @@
-const API = "https://projeto-sass-propaganda.vercel.app/api";
+const API = "/api";
 
 // ================= SAFE JSON =================
 async function safeJson(res) {
