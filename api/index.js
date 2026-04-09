@@ -199,6 +199,82 @@ export default async function handler(req, res) {
             return res.json(data);
         }
 
+
+        // ================= CLICK AD =================
+        if (action === "click") {
+
+            const { adId } = req.body;
+
+            if (!adId) {
+                return res.status(400).json({ error: "Ad inválido" });
+            }
+
+            const { data: ad } = await supabase
+                .from("ads")
+                .select("*")
+                .eq("id", adId)
+                .single();
+
+            if (!ad) {
+                return res.status(404).json({ error: "Ad não encontrado" });
+            }
+
+            const { data: user } = await supabase
+                .from("users")
+                .select("*")
+                .eq("id", ad.user_id)
+                .single();
+
+            // 🔥 AQUI ENTRA A REGRA
+            if (!user || user.balance < ad.bid) {
+                return res.json({ paused: true });
+            }
+
+            // atualiza clique
+            await supabase
+                .from("ads")
+                .update({ clicks: ad.clicks + 1 })
+                .eq("id", adId);
+
+            // desconta saldo
+            await supabase
+                .from("users")
+                .update({ balance: user.balance - ad.bid })
+                .eq("id", user.id);
+
+            return res.json({ ok: true });
+        }
+
+        // ================= VIEW AD =================
+        if (action === "view") {
+
+            const { adId } = req.body;
+
+            const { data: ad } = await supabase
+                .from("ads")
+                .select("views")
+                .eq("id", adId)
+                .single();
+
+            await supabase
+                .from("ads")
+                .update({ views: ad.views + 1 })
+                .eq("id", adId);
+
+            return res.json({ ok: true });
+        }
+
+        // ================= LIST ADS =================
+        if (action === "listAds") {
+
+            const { data } = await supabase
+                .from("ads")
+                .select("*")
+                .order("score", { ascending: false });
+
+            return res.json(data);
+        }
+
         // ================= CREATE CHECKOUT =================
         if (action === "createCheckout") {
 

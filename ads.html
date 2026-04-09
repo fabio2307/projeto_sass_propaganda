@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Anúncios</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div class="topbar">
+        <h2>🔥 Anúncios em destaque</h2>
+    </div>
+
+    <div class="ads" id="ads"></div>
+
+    <script>
+        const API = "/api";
+
+        async function carregarAdsPublicos() {
+            try {
+                const res = await fetch(`${API}?action=listAds`);
+                const ads = await res.json();
+
+                renderAds(ads);
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderAds(ads) {
+            const container = document.getElementById("ads");
+
+            container.innerHTML = ads.map(ad => {
+                const ctr = ad.views > 0
+                    ? ((ad.clicks / ad.views) * 100).toFixed(1)
+                    : 0;
+
+                return `
+                <div class="ad-card">
+
+                    <h3>${ad.title}</h3>
+
+                    <p>${ad.description || ""}</p>
+
+                    <a href="${ad.link}" target="_blank"
+                       onclick="registrarClick('${ad.id}')">
+                        🔗 Ver oferta
+                    </a>
+
+                    <div class="ad-metrics">
+                        <span>👁 ${ad.views}</span>
+                        <span>🖱 ${ad.clicks}</span>
+                        <span>📊 ${ctr}%</span>
+                    </div>
+
+                </div>
+                `;
+            }).join("");
+        }
+
+        async function registrarClick(adId) {
+            try {
+                const res = await fetch(`${API}?action=click`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ adId })
+                });
+
+                const data = await res.json();
+
+                // 🔥 AQUI TRATA O PAUSE
+                if (data.paused) {
+                    alert("Anúncio pausado por saldo insuficiente");
+                }
+
+            } catch (err) {
+                console.error("Erro ao registrar clique");
+            }
+        }
+
+        carregarAdsPublicos();
+    </script>
+
+</body>
+
+</html>

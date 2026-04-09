@@ -117,3 +117,43 @@ button {
   text-align: center;
   font-size: 14px;
 }
+
+.ad-card {
+  background: #020617;
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid #1e293b;
+  transition: 0.2s;
+}
+
+.ad-card:hover {
+  transform: translateY(-4px);
+  border-color: #3b82f6;
+}
+
+.ad-card h3 {
+  margin: 0 0 5px 0;
+}
+
+.ad-card p {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.ad-card a {
+  display: inline-block;
+  margin-top: 10px;
+  background: #3b82f6;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: white;
+  text-decoration: none;
+}
+
+.ad-metrics {
+  margin-top: 10px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  color: #cbd5f5;
+}

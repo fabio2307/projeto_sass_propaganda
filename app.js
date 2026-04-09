@@ -143,16 +143,61 @@ function renderAds(ads) {
 
     if (!container) return;
 
-    container.innerHTML = ads.map(ad => `
-        <div>
-            <strong>${ad.title}</strong><br>
-            ${ad.description || ""}
+    container.innerHTML = ads.map(ad => {
+        const ctr = ad.views > 0
+            ? ((ad.clicks / ad.views) * 100).toFixed(1)
+            : 0;
+
+        return `
+        <div class="ad-card">
+
+            <h3>${ad.title}</h3>
+
+            <p>${ad.description || "Sem descrição"}</p>
+
+            <a href="${ad.link}" target="_blank"
+              onclick="registrarClick('${ad.id}')">
+             🔗 Acessar produto
+           </a>
+
+            <div class="ad-metrics">
+                <span>👁 ${ad.views}</span>
+                <span>🖱 ${ad.clicks}</span>
+                <span>📊 ${ctr}%</span>
+            </div>
+
+            <div class="ad-metrics">
+                <span>💰 R$ ${ad.bid}</span>
+                <span>⭐ ${ad.score || 0}</span>
+            </div>
+
         </div>
-    `).join("");
+        `;
+    }).join("");
+}
+
+async function registrarClick(adId) {
+    try {
+        await fetch(`${API}?action=click`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ adId })
+        });
+    } catch (err) {
+        console.error("Erro ao registrar clique");
+    }
 }
 
 function atualizarStats(ads) {
-    console.log("Ads:", ads.length);
+    const totalAds = ads.length;
+    const totalClicks = ads.reduce((acc, ad) => acc + (ad.clicks || 0), 0);
+    const totalViews = ads.reduce((acc, ad) => acc + (ad.views || 0), 0);
+
+    document.getElementById("totalAds").innerText = totalAds;
+    document.getElementById("totalClicks").innerText = totalClicks;
+    document.getElementById("totalViews").innerText = totalViews;
 }
 
 // ================= CRIAR AD =================
@@ -191,6 +236,7 @@ async function criarAd() {
         document.getElementById("description").value = "";
         document.getElementById("link").value = "";
         document.getElementById("bid").value = "";
+        document.getElementById("valor").value = "";
 
         await carregarAds();
 
@@ -221,7 +267,7 @@ async function carregarAds() {
 // ================= PAGAMENTO =================
 async function pagar() {
     try {
-        const amount = Number(document.getElementById("amount").value);
+        const amount = Number(document.getElementById("valor").value);
 
         if (!amount || amount <= 0) {
             throw new Error("Valor inválido");
