@@ -63,14 +63,19 @@ async function register() {
             })
         });
 
-        await safeJson(res);
+        const data = await res.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
 
         alert("Conta criada com sucesso!");
-
         showLogin();
 
     } catch (err) {
-        alert(err.message);
+        console.error(err);
+        alert("Erro: " + err.message);
     }
 }
 
