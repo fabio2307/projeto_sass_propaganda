@@ -33,31 +33,53 @@
         function renderAds(ads) {
             const container = document.getElementById("ads");
 
+            // 🔥 contabiliza views
+            ads.forEach(ad => {
+                fetch(`${API}?action=view`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ adId: ad.id })
+                });
+            });
+
             container.innerHTML = ads.map(ad => {
                 const ctr = ad.views > 0
                     ? ((ad.clicks / ad.views) * 100).toFixed(1)
                     : 0;
 
                 return `
-                <div class="ad-card">
+        <div class="ad-card">
 
-                    <h3>${ad.title}</h3>
+            <h3>${ad.title}</h3>
 
-                    <p>${ad.description || ""}</p>
+            <p>${ad.description || ""}</p>
 
-                    <a href="${ad.link}" target="_blank"
-                       onclick="registrarClick('${ad.id}')">
-                        🔗 Ver oferta
-                    </a>
+            <a href="${ad.link}" target="_blank"
+               onclick="registrarClick('${ad.id}')">
+                🔗 Ver oferta
+            </a>
 
-                    <div class="ad-metrics">
-                        <span>👁 ${ad.views}</span>
-                        <span>🖱 ${ad.clicks}</span>
-                        <span>📊 ${ctr}%</span>
-                    </div>
+            <div class="ad-metrics">
+                <span>👁 ${ad.views}</span>
+                <span>🖱 ${ad.clicks}</span>
+                <span>📊 ${ctr}%</span>
+            </div>
 
-                </div>
-                `;
+            <!-- 🔥 NOVO -->
+            <div class="ad-extra">
+                <span>💰 Bid: ${ad.bid}</span>
+                <span>📌 Status: ${ad.status || "active"}</span>
+            </div>
+
+            <!-- 🔥 BOTÃO -->
+            <button onclick="toggleAd('${ad.id}', '${ad.status}')">
+                ${ad.status === "active" ? "⏸ Pausar" : "▶ Ativar"}
+            </button>
+
+        </div>
+        `;
             }).join("");
         }
 

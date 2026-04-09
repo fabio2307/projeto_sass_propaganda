@@ -2,8 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
+import { checkRateLimit } from "../../lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+const ip = req.headers["x-forwarded-for"] || "unknown";
+
+if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: "Muitos cliques" });
+}
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -169,7 +176,8 @@ export default async function handler(req, res) {
                     link,
                     bid,
                     clicks: 0,
-                    views: 0
+                    views: 0,
+                    status: "active"
                 }]);
 
             if (error) {
@@ -227,6 +235,12 @@ export default async function handler(req, res) {
 
             // 🔥 AQUI ENTRA A REGRA
             if (!user || user.balance < ad.bid) {
+
+                await supabase
+                    .from("ads")
+                    .update({ status: "paused" })
+                    .eq("id", ad.id);
+
                 return res.json({ paused: true });
             }
 
@@ -270,9 +284,42 @@ export default async function handler(req, res) {
             const { data } = await supabase
                 .from("ads")
                 .select("*")
+                .eq("status", "active")
                 .order("score", { ascending: false });
 
             return res.json(data);
+        }
+
+        // ================= TRANSACTIONS =================
+        if (action === "transactions") {
+
+            const token = extractToken(req);
+            const user = await getUserFromToken(token);
+
+            const { data } = await supabase
+                .from("transactions")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false });
+
+            return res.json(data);
+        }
+
+// ================= TOGGLE AD =================
+        if (action === "toggleAd") {
+
+            const token = extractToken(req);
+            const user = await getUserFromToken(token);
+
+            const { id, status } = req.body;
+
+            await supabase
+                .from("ads")
+                .update({ status })
+                .eq("id", id)
+                .eq("user_id", user.id);
+
+            return res.json({ ok: true });
         }
 
         // ================= CREATE CHECKOUT =================

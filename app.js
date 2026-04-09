@@ -169,6 +169,7 @@ function renderAds(ads) {
             <div class="ad-metrics">
                 <span>💰 R$ ${ad.bid}</span>
                 <span>⭐ ${ad.score || 0}</span>
+                <span>📌 ${ad.status}</span>
             </div>
 
         </div>
@@ -288,6 +289,29 @@ async function pagar() {
 
     } catch (err) {
         alert(err.message);
+    }
+}
+
+// ================= TOGGLE AD =================
+async function toggleAd(id, status) {
+
+    try {
+        await fetch(`${API}?action=toggleAd`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${getToken()}`
+            },
+            body: JSON.stringify({
+                id,
+                status: status === "active" ? "paused" : "active"
+            })
+        });
+
+        carregarAds();
+
+    } catch (err) {
+        console.error("Erro ao alterar status do anúncio");
     }
 }
 
