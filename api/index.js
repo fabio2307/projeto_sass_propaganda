@@ -4,13 +4,13 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import { checkRateLimit } from "../../lib/rateLimit";
 
+export const config = {
+    api: {
+        bodyParser: false
+    }
+};
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const ip = req.headers["x-forwarded-for"] || "unknown";
-
-if (!checkRateLimit(ip)) {
-    return res.status(429).json({ error: "Muitos cliques" });
-}
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -18,6 +18,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+
+    const ip = req.headers["x-forwarded-for"] || "unknown";
+
+    if (!checkRateLimit(ip)) {
+        return res.status(429).json({ error: "Muitos cliques" });
+    }
 
     const { action } = req.query;
 
@@ -53,6 +59,9 @@ export default async function handler(req, res) {
         if (error) {
             console.error("❌ ERRO TOKEN:", error);
             return null;
+        }
+        if (!user) {
+            return res.status(401).json({ error: "Não autorizado" });
         }
 
         console.log("✅ USER:", data?.id);
@@ -207,6 +216,53 @@ export default async function handler(req, res) {
             return res.json(data);
         }
 
+        // ================= OPTIMIZE ADS =================
+        if (action === "webhook") {
+            const sig = req.headers["stripe-signature"];
+
+            let event;
+
+            try {
+                event = stripe.webhooks.constructEvent(
+                    req.rawBody,
+                    sig,
+                    process.env.STRIPE_WEBHOOK_SECRET
+                );
+            } catch (err) {
+                return res.status(400).send(`Webhook Error: ${err.message}`);
+            }
+
+            if (event.type === "checkout.session.completed") {
+
+                const session = event.data.object;
+
+                const userId = session.metadata.user_id;
+                const amount = Number(session.metadata.amount);
+
+                const { data: user } = await supabase
+                    .from("users")
+                    .select("balance")
+                    .eq("id", userId)
+                    .single();
+
+                await supabase
+                    .from("users")
+                    .update({
+                        balance: user.balance + amount
+                    })
+                    .eq("id", userId);
+
+                await supabase
+                    .from("transactions")
+                    .insert([{
+                        user_id: userId,
+                        amount,
+                        type: "deposit"
+                    }]);
+            }
+
+            return res.json({ received: true });
+        }
 
         // ================= CLICK AD =================
         if (action === "click") {
@@ -305,7 +361,7 @@ export default async function handler(req, res) {
             return res.json(data);
         }
 
-// ================= TOGGLE AD =================
+        // ================= TOGGLE AD =================
         if (action === "toggleAd") {
 
             const token = extractToken(req);

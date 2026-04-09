@@ -113,6 +113,14 @@ async function init() {
 
     await carregarSaldo();
     await carregarAds();
+
+    if (window.location.search.includes("success")) {
+        alert("Pagamento aprovado!");
+        carregarSaldo();
+
+        // limpa URL
+        window.history.replaceState({}, document.title, "/");
+    }
 }
 
 // ================= SALDO =================
