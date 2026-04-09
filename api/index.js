@@ -13,62 +13,64 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
 
-    console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
-    console.log("SUPABASE_KEY:", process.env.SUPABASE_ANON_KEY ? "OK" : "MISSING");
-
-    // ✅ BODY PARSER MANUAL (AGORA NO LUGAR CERTO)
-    let body = req.body;
-
-    if (!body && req.method === "POST") {
-        const buffers = [];
-
-        for await (const chunk of req) {
-            buffers.push(chunk);
-        }
-
-        const raw = Buffer.concat(buffers).toString();
-
-        try {
-            body = raw ? JSON.parse(raw) : {};
-        } catch {
-            body = {};
-        }
-    }
-
-    const ip = req.headers["x-forwarded-for"] || "unknown";
-
-    if (!checkRateLimit(ip)) {
-        return res.status(429).json({ error: "Muitos cliques" });
-    }
-
-    const { action } = req.query;
-
-    function extractToken(req) {
-        const authHeader =
-            req.headers.authorization ||
-            req.headers.Authorization ||
-            "";
-
-        if (!authHeader.startsWith("Bearer ")) return null;
-
-        return authHeader.split(" ")[1];
-    }
-
-    async function getUserFromToken(token) {
-        if (!token) return null;
-
-        const { data, error } = await supabase
-            .from("users")
-            .select("*")
-            .eq("token", token.trim())
-            .single();
-
-        if (error || !data) return null;
-
-        return data;
-    }
-
     try {
+
+        console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
+        console.log("SUPABASE_KEY:", process.env.SUPABASE_ANON_KEY ? "OK" : "MISSING");
+
+        // ✅ BODY PARSER MANUAL (AGORA NO LUGAR CERTO)
+        let body = req.body;
+
+        if (!body && req.method === "POST") {
+            const buffers = [];
+
+            for await (const chunk of req) {
+                buffers.push(chunk);
+            }
+
+            const raw = Buffer.concat(buffers).toString();
+
+            try {
+                body = raw ? JSON.parse(raw) : {};
+            } catch {
+                body = {};
+            }
+        }
+
+        const ip = req.headers["x-forwarded-for"] || "unknown";
+
+        if (!checkRateLimit(ip)) {
+            return res.status(429).json({ error: "Muitos cliques" });
+        }
+
+        const { action } = req.query;
+
+        function extractToken(req) {
+            const authHeader =
+                req.headers.authorization ||
+                req.headers.Authorization ||
+                "";
+
+            if (!authHeader.startsWith("Bearer ")) return null;
+
+            return authHeader.split(" ")[1];
+        }
+
+        async function getUserFromToken(token) {
+            if (!token) return null;
+
+            const { data, error } = await supabase
+                .from("users")
+                .select("*")
+                .eq("token", token.trim())
+                .single();
+
+            if (error || !data) return null;
+
+            return data;
+        }
+
+
 
         // ================= REGISTER =================
         if (action === "register") {
@@ -415,7 +417,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Ação inválida" });
 
     } catch (err) {
-        console.error("ERRO:", err);
-        return res.status(500).json({ error: "Erro interno" });
+        console.error("ERRO REAL:", err);
+
+        return res.status(500).json({
+            error: "Erro interno",
+            detalhe: err.message
+        });
     }
 }
