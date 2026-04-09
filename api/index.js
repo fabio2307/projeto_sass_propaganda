@@ -4,11 +4,16 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-export const config = {
-    api: {
-        bodyParser: false
+let body = req.body;
+
+if (!body && req.method === "POST") {
+    const buffers = [];
+    for await (const chunk of req) {
+        buffers.push(chunk);
     }
-};
+    const raw = Buffer.concat(buffers).toString();
+    body = raw ? JSON.parse(raw) : {};
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -59,9 +64,6 @@ export default async function handler(req, res) {
         if (error) {
             console.error("❌ ERRO TOKEN:", error);
             return null;
-        }
-        if (!user) {
-            return res.status(401).json({ error: "Não autorizado" });
         }
 
         console.log("✅ USER:", data?.id);
