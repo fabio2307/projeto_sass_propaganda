@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
-import { checkRateLimit } from "../../lib/rateLimit";
+import { checkRateLimit } from "../lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
