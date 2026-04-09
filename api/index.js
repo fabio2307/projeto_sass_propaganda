@@ -4,17 +4,6 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import { checkRateLimit } from "../../lib/rateLimit";
 
-let body = req.body;
-
-if (!body && req.method === "POST") {
-    const buffers = [];
-    for await (const chunk of req) {
-        buffers.push(chunk);
-    }
-    const raw = Buffer.concat(buffers).toString();
-    body = raw ? JSON.parse(raw) : {};
-}
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const supabase = createClient(
@@ -23,6 +12,25 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
+
+    // ✅ BODY PARSER MANUAL (AGORA NO LUGAR CERTO)
+    let body = req.body;
+
+    if (!body && req.method === "POST") {
+        const buffers = [];
+
+        for await (const chunk of req) {
+            buffers.push(chunk);
+        }
+
+        const raw = Buffer.concat(buffers).toString();
+
+        try {
+            body = raw ? JSON.parse(raw) : {};
+        } catch {
+            body = {};
+        }
+    }
 
     const ip = req.headers["x-forwarded-for"] || "unknown";
 
@@ -38,35 +46,21 @@ export default async function handler(req, res) {
             req.headers.Authorization ||
             "";
 
-        console.log("AUTH HEADER:", authHeader);
-
         if (!authHeader.startsWith("Bearer ")) return null;
 
         return authHeader.split(" ")[1];
     }
 
     async function getUserFromToken(token) {
-        if (!token) {
-            console.log("❌ TOKEN VAZIO");
-            return null;
-        }
-
-        const cleanToken = token.trim();
-
-        console.log("🔍 TOKEN RECEBIDO:", cleanToken);
+        if (!token) return null;
 
         const { data, error } = await supabase
             .from("users")
             .select("*")
-            .eq("token", cleanToken)
+            .eq("token", token.trim())
             .single();
 
-        if (error) {
-            console.error("❌ ERRO TOKEN:", error);
-            return null;
-        }
-
-        console.log("✅ USER:", data?.id);
+        if (error || !data) return null;
 
         return data;
     }
@@ -76,7 +70,7 @@ export default async function handler(req, res) {
         // ================= REGISTER =================
         if (action === "register") {
 
-            const { name, age, email, password } = req.body;
+            const { name, age, email, password } = body;
 
             if (!name || !email || !password) {
                 return res.status(400).json({ error: "Dados inválidos" });
@@ -108,17 +102,16 @@ export default async function handler(req, res) {
                 }]);
 
             if (error) {
-                console.error(error);
                 return res.status(400).json({ error: "Erro ao criar conta" });
             }
 
-            return res.json({ ok: true }); // 🔥 não loga mais automaticamente
+            return res.json({ ok: true });
         }
 
         // ================= LOGIN =================
         if (action === "login") {
 
-            const { email, password } = req.body;
+            const { email, password } = body;
 
             const { data: user } = await supabase
                 .from("users")
@@ -135,8 +128,6 @@ export default async function handler(req, res) {
             if (!match) {
                 return res.status(401).json({ error: "Login inválido" });
             }
-
-            console.log("✅ LOGIN OK, TOKEN:", user.token);
 
             return res.json({
                 token: user.token
@@ -172,7 +163,7 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            const { title, description, link, bid } = req.body;
+            const { title, description, link, bid } = body;
 
             if (!title || !link || bid === undefined || bid === null || bid <= 0) {
                 return res.status(400).json({ error: "Dados inválidos" });
@@ -269,7 +260,7 @@ export default async function handler(req, res) {
         // ================= CLICK AD =================
         if (action === "click") {
 
-            const { adId } = req.body;
+            const { adId } = body;
 
             if (!adId) {
                 return res.status(400).json({ error: "Ad inválido" });
@@ -320,7 +311,7 @@ export default async function handler(req, res) {
         // ================= VIEW AD =================
         if (action === "view") {
 
-            const { adId } = req.body;
+            const { adId } = body;
 
             const { data: ad } = await supabase
                 .from("ads")
@@ -369,7 +360,7 @@ export default async function handler(req, res) {
             const token = extractToken(req);
             const user = await getUserFromToken(token);
 
-            const { id, status } = req.body;
+            const { id, status } = body;
 
             await supabase
                 .from("ads")
@@ -390,7 +381,7 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            const { amount } = req.body;
+            const { amount } = body;
 
             if (!amount || amount <= 0) {
                 return res.status(400).json({ error: "Valor inválido" });
