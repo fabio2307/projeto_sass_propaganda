@@ -13,6 +13,12 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
 
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+        return res.status(500).json({
+            error: "ENV não configurada"
+        });
+    }
+
     try {
 
         console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
