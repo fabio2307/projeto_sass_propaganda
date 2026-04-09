@@ -5,10 +5,12 @@ async function safeJson(res) {
     const text = await res.text();
 
     let data;
+
     try {
         data = JSON.parse(text);
     } catch {
-        throw new Error("Erro inesperado");
+        console.error("RESPOSTA NÃO JSON:", text);
+        throw new Error("Erro inesperado do servidor");
     }
 
     if (!res.ok) {
@@ -63,12 +65,7 @@ async function register() {
             })
         });
 
-        const data = await res.json();
-
-        if (data.error) {
-            alert(data.error);
-            return;
-        }
+        const data = await safeJson(res);
 
         alert("Conta criada com sucesso!");
         showLogin();
@@ -122,8 +119,6 @@ async function init() {
     if (window.location.search.includes("success")) {
         alert("Pagamento aprovado!");
         carregarSaldo();
-
-        // limpa URL
         window.history.replaceState({}, document.title, "/");
     }
 }
@@ -132,8 +127,6 @@ async function init() {
 async function carregarSaldo() {
     try {
         const token = getToken();
-
-        console.log("TOKEN ENVIADO:", token);
 
         const res = await fetch(`${API}?action=getUser`, {
             headers: {
@@ -163,9 +156,7 @@ function renderAds(ads) {
 
         return `
         <div class="ad-card">
-
             <h3>${ad.title}</h3>
-
             <p>${ad.description || "Sem descrição"}</p>
 
             <a href="${ad.link}" target="_blank"
@@ -184,12 +175,12 @@ function renderAds(ads) {
                 <span>⭐ ${ad.score || 0}</span>
                 <span>📌 ${ad.status}</span>
             </div>
-
         </div>
         `;
     }).join("");
 }
 
+// ================= CLICK =================
 async function registrarClick(adId) {
     try {
         await fetch(`${API}?action=click`, {
@@ -199,11 +190,12 @@ async function registrarClick(adId) {
             },
             body: JSON.stringify({ adId })
         });
-    } catch (err) {
+    } catch {
         console.error("Erro ao registrar clique");
     }
 }
 
+// ================= STATS =================
 function atualizarStats(ads) {
     const totalAds = ads.length;
     const totalClicks = ads.reduce((acc, ad) => acc + (ad.clicks || 0), 0);
@@ -221,7 +213,6 @@ async function criarAd() {
         const description = document.getElementById("description").value;
         const link = document.getElementById("link").value;
         const bid = Number(document.getElementById("bid").value);
-        console.log({ title, description, link, bid });
 
         if (!title || !link || isNaN(bid) || bid <= 0) {
             throw new Error("Preencha os campos corretamente");
@@ -233,19 +224,13 @@ async function criarAd() {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${getToken()}`
             },
-            body: JSON.stringify({
-                title,
-                description,
-                link,
-                bid
-            })
+            body: JSON.stringify({ title, description, link, bid })
         });
 
         await safeJson(res);
 
         alert("Anúncio criado com sucesso 🚀");
 
-        // limpa campos
         document.getElementById("title").value = "";
         document.getElementById("description").value = "";
         document.getElementById("link").value = "";
@@ -307,7 +292,6 @@ async function pagar() {
 
 // ================= TOGGLE AD =================
 async function toggleAd(id, status) {
-
     try {
         await fetch(`${API}?action=toggleAd`, {
             method: "POST",
@@ -323,7 +307,7 @@ async function toggleAd(id, status) {
 
         carregarAds();
 
-    } catch (err) {
+    } catch {
         console.error("Erro ao alterar status do anúncio");
     }
 }
