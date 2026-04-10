@@ -21,9 +21,15 @@
         async function carregarAdsPublicos() {
             try {
                 const res = await fetch(`${API}?action=listAds`);
-                const ads = await res.json();
 
-                renderAds(ads);
+                const data = await res.json();
+
+                if (!Array.isArray(data)) {
+                    console.error("Erro API:", data);
+                    return;
+                }
+
+                renderAds(data);
 
             } catch (err) {
                 console.error(err);

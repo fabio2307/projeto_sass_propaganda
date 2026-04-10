@@ -59,8 +59,10 @@ export default async function handler(req, res) {
         // ✅ IP corrigido (Vercel manda lista)
         const ip = (req.headers["x-forwarded-for"] || "").split(",")[0] || "unknown";
 
-        if (!checkRateLimit(ip)) {
-            return res.status(429).json({ error: "Muitos cliques" });
+        if (action === "click" || action === "createAd") {
+            if (!checkRateLimit(ip)) {
+                return res.status(429).json({ error: "Muitos cliques" });
+            }
         }
 
         const { action } = req.query;

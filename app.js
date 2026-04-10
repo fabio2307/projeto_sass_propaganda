@@ -175,15 +175,17 @@ function renderAds(ads) {
     const userId = localStorage.getItem("userId") || ""; // ✅ AQUI
 
     // 🔥 contabiliza views
-    ads.forEach(ad => {
-        fetch(`${API}?action=view`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ adId: ad.id })
+    setTimeout(() => {
+        ads.forEach(ad => {
+            fetch(`${API}?action=view`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ adId: ad.id })
+            });
         });
-    });
+    }, 1000);
 
     container.innerHTML = ads.map(ad => {
         const ctr = ad.views > 0
