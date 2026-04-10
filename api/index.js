@@ -206,6 +206,24 @@ export default async function handler(req, res) {
             return res.json({ success: true });
         }
 
+        // ================= MY ADS =================
+        if (action === "myAds") {
+
+            const user = await getUserFromToken(extractToken(req));
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { data } = await supabase
+                .from("ads")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false });
+
+            return res.json(data);
+        }
+
         // ================= LIST ADS =================
         if (action === "listAds") {
 
