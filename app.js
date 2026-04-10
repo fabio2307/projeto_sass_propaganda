@@ -172,9 +172,18 @@ async function carregarSaldo() {
 // ================= API =================
 function renderAds(ads) {
     const container = document.getElementById("ads");
-    const userId = localStorage.getItem("userId");
+    const userId = localStorage.getItem("userId") || ""; // ✅ AQUI
 
-    if (!container) return;
+    // 🔥 contabiliza views
+    ads.forEach(ad => {
+        fetch(`${API}?action=view`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ adId: ad.id })
+        });
+    });
 
     container.innerHTML = ads.map(ad => {
         const ctr = ad.views > 0
@@ -183,13 +192,14 @@ function renderAds(ads) {
 
         return `
         <div class="ad-card">
+
             <h3>${ad.title}</h3>
-            <p>${ad.description || "Sem descrição"}</p>
+            <p>${ad.description || ""}</p>
 
             <a href="${ad.link}" target="_blank"
-              onclick="registrarClick('${ad.id}')">
-             🔗 Acessar produto
-           </a>
+               onclick="registrarClick('${ad.id}')">
+                🔗 Ver oferta
+            </a>
 
             <div class="ad-metrics">
                 <span>👁 ${ad.views}</span>
@@ -197,11 +207,17 @@ function renderAds(ads) {
                 <span>📊 ${ctr}%</span>
             </div>
 
-            <div class="ad-metrics">
-                <span>💰 R$ ${ad.bid}</span>
-                <span>⭐ ${ad.score || 0}</span>
-                <span>📌 ${ad.status}</span>
+            <div class="ad-extra">
+                <span>💰 Bid: ${ad.bid}</span>
+                <span>📌 Status: ${ad.status || "active"}</span>
             </div>
+
+            ${ad.user_id == userId ? `
+                <button onclick="toggleAd('${ad.id}', '${ad.status}')">
+                    ${ad.status === "active" ? "⏸ Pausar" : "▶ Ativar"}
+                </button>
+            ` : ""}
+
         </div>
         `;
     }).join("");
