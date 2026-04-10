@@ -337,34 +337,25 @@ async function pagar() {
 }
 
 // ================= TOGGLE AD =================
-async function toggleAd(id, status) {
+async function toggleAd(adId, status) {
     try {
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            alert("Você precisa estar logado");
-            return;
-        }
-
-        const newStatus = status === "active" ? "paused" : "active";
-
-        const res = await fetch(`${API}?action=toggleAd`, {
+        await fetch(`${API}?action=toggleAd`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
+                "Content-Type": "application/json"
             },
-            body: JSON.stringify({ id, status: newStatus })
+            body: JSON.stringify({
+                adId,
+                status: status === "active" ? "paused" : "active"
+            })
         });
 
-        const data = await res.json();
-
-        if (data.error) {
-            alert(data.error);
-            return;
+        // 🔥 inteligente
+        if (typeof carregarAds === "function") {
+            carregarAds();
+        } else if (typeof carregarAdsPublicos === "function") {
+            carregarAdsPublicos();
         }
-
-        carregarAdsPublicos();
 
     } catch (err) {
         console.error(err);
