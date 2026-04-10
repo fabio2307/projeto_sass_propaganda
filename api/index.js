@@ -57,15 +57,18 @@ export default async function handler(req, res) {
         }
 
         // ✅ IP corrigido (Vercel manda lista)
+
+        const { action } = req.query;
+
+        // ✅ IP corrigido
         const ip = (req.headers["x-forwarded-for"] || "").split(",")[0] || "unknown";
 
+        // ✅ rate limit só em ações específicas
         if (action === "click" || action === "createAd") {
             if (!checkRateLimit(ip)) {
                 return res.status(429).json({ error: "Muitos cliques" });
             }
         }
-
-        const { action } = req.query;
 
         function extractToken(req) {
             const authHeader =
@@ -401,11 +404,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Ação inválida" });
 
     } catch (err) {
-        console.error("ERRO REAL:", err);
+        console.error("🔥 ERRO REAL:", err);
 
         return res.status(500).json({
             error: "Erro interno",
-            detalhe: err.message
+            detalhe: err.message // 👈 ajuda MUITO
         });
     }
 }
