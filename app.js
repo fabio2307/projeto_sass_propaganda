@@ -310,7 +310,8 @@ async function pagar() {
 
         const data = await safeJson(res);
 
-        window.location.href = data.url;
+        // ✅ abre em nova guia
+        window.open(data.url, "_blank");
 
     } catch (err) {
         alert(err.message);
