@@ -78,30 +78,37 @@ async function register() {
 
 // ================= LOGIN =================
 async function login() {
-
-    localStorage.setItem("userId", data.user.id);
-    localStorage.setItem("token", data.token);
-
     try {
-        const res = await fetch(`${API}?action=login`, {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        const res = await fetch("/api?action=login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                email: document.getElementById("loginEmail").value,
-                password: document.getElementById("loginPassword").value
-            })
+            body: JSON.stringify({ email, password })
         });
 
-        const data = await safeJson(res);
+        const data = await res.json(); // ✅ AQUI
 
-        setToken(data.token);
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
 
-        await init();
+        // 🔐 salvar sessão
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("userId", data.user.id);
+
+        alert("Login realizado!");
+
+        // opcional: redirecionar
+        window.location.href = "/";
 
     } catch (err) {
-        alert(err.message);
+        console.error(err);
+        alert("Erro no login");
     }
 }
 
