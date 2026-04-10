@@ -79,10 +79,9 @@ async function register() {
 // ================= LOGIN =================
 async function login() {
     try {
-        const emailInput = document.getElementById("email");
-        const passwordInput = document.getElementById("password");
+        const emailInput = document.getElementById("loginEmail");
+        const passwordInput = document.getElementById("loginPassword");
 
-        // 🔥 proteção contra null
         if (!emailInput || !passwordInput) {
             console.error("Campos de login não encontrados na página");
             alert("Erro de interface. Recarregue a página.");
@@ -105,14 +104,12 @@ async function login() {
             body: JSON.stringify({ email, password })
         });
 
-        const data = await safeJson(res); // ✅ usar safeJson
+        const data = await safeJson(res);
 
-        // 🔐 salvar sessão
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
 
         alert("Login realizado!");
-
         window.location.href = "/";
 
     } catch (err) {
