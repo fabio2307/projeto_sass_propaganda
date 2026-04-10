@@ -307,6 +307,51 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
+        // ================= CHECKOUT =================
+        if (action === "createCheckout") {
+
+            if (!stripe) {
+                return res.status(500).json({ error: "Stripe não configurado" });
+            }
+
+            const user = await getUserFromToken(extractToken(req));
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { amount } = body;
+
+            if (!amount || amount <= 0) {
+                return res.status(400).json({ error: "Valor inválido" });
+            }
+
+            try {
+                const session = await stripe.checkout.sessions.create({
+                    payment_method_types: ["card"],
+                    mode: "payment",
+                    line_items: [{
+                        price_data: {
+                            currency: "brl",
+                            product_data: {
+                                name: "Adicionar saldo"
+                            },
+                            unit_amount: Math.round(amount * 100)
+                        },
+                        quantity: 1
+                    }],
+                    success_url: `${req.headers.origin}/?success=true`,
+                    cancel_url: `${req.headers.origin}/?cancel=true`
+                });
+
+                return res.json({ url: session.url });
+
+            } catch (err) {
+                console.error("Erro Stripe:", err);
+                return res.status(500).json({ error: "Erro ao criar pagamento" });
+            }
+        }
+
         // ================= TOGGLE (CORRIGIDO) =================
         if (action === "toggleAd") {
 
