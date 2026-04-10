@@ -79,10 +79,25 @@ async function register() {
 // ================= LOGIN =================
 async function login() {
     try {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
+        const emailInput = document.getElementById("email");
+        const passwordInput = document.getElementById("password");
 
-        const res = await fetch("/api?action=login", {
+        // 🔥 proteção contra null
+        if (!emailInput || !passwordInput) {
+            console.error("Campos de login não encontrados na página");
+            alert("Erro de interface. Recarregue a página.");
+            return;
+        }
+
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+            alert("Preencha email e senha");
+            return;
+        }
+
+        const res = await fetch(`${API}?action=login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -90,12 +105,7 @@ async function login() {
             body: JSON.stringify({ email, password })
         });
 
-        const data = await res.json(); // ✅ AQUI
-
-        if (data.error) {
-            alert(data.error);
-            return;
-        }
+        const data = await safeJson(res); // ✅ usar safeJson
 
         // 🔐 salvar sessão
         localStorage.setItem("token", data.token);
@@ -103,12 +113,11 @@ async function login() {
 
         alert("Login realizado!");
 
-        // opcional: redirecionar
         window.location.href = "/";
 
     } catch (err) {
         console.error(err);
-        alert("Erro no login");
+        alert("Erro no login: " + err.message);
     }
 }
 
@@ -337,8 +346,22 @@ async function toggleAd(id, status) {
     }
 }
 
+// ================= DOM CONTENT LOADED =================
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("btnLogin");
+
+    if (btn) {
+        btn.addEventListener("click", login);
+    }
+});
+
+// ================= EXPORTS PARA HTML =================
+if (document.getElementById("email")) {
+    window.login = login;
+}
+
 // ================= EXPORT =================
-window.login = login;
+
 window.register = register;
 window.pagar = pagar;
 window.logout = logout;
