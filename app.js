@@ -78,6 +78,10 @@ async function register() {
 
 // ================= LOGIN =================
 async function login() {
+
+    localStorage.setItem("userId", data.user.id);
+    localStorage.setItem("token", data.token);
+
     try {
         const res = await fetch(`${API}?action=login`, {
             method: "POST",
@@ -146,6 +150,7 @@ async function carregarSaldo() {
 // ================= API =================
 function renderAds(ads) {
     const container = document.getElementById("ads");
+    const userId = localStorage.getItem("userId");
 
     if (!container) return;
 
@@ -293,22 +298,35 @@ async function pagar() {
 // ================= TOGGLE AD =================
 async function toggleAd(id, status) {
     try {
-        await fetch(`${API}?action=toggleAd`, {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+            alert("Você precisa estar logado");
+            return;
+        }
+
+        const newStatus = status === "active" ? "paused" : "active";
+
+        const res = await fetch(`${API}?action=toggleAd`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${getToken()}`
+                "Authorization": "Bearer " + token
             },
-            body: JSON.stringify({
-                id,
-                status: status === "active" ? "paused" : "active"
-            })
+            body: JSON.stringify({ id, status: newStatus })
         });
 
-        carregarAds();
+        const data = await res.json();
 
-    } catch {
-        console.error("Erro ao alterar status do anúncio");
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        carregarAdsPublicos();
+
+    } catch (err) {
+        console.error(err);
     }
 }
 

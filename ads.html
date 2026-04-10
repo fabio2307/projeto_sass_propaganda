@@ -74,9 +74,11 @@
             </div>
 
             <!-- 🔥 BOTÃO -->
-            <button onclick="toggleAd('${ad.id}', '${ad.status}')">
-                ${ad.status === "active" ? "⏸ Pausar" : "▶ Ativar"}
-            </button>
+            ${ad.user_id === userId ? `
+                <button onclick="toggleAd('${ad.id}', '${ad.status}')">
+                    ${ad.status === "active" ? "⏸ Pausar" : "▶ Ativar"}
+                </button>
+            ` : ""}
 
         </div>
         `;

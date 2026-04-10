@@ -8,7 +8,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY)
     : null;
 
-// ✅ Rate limit fora do handler (funciona melhor)
+// ✅ Rate limit
 const clicks = new Map();
 
 function checkRateLimit(ip) {
@@ -45,10 +45,7 @@ export default async function handler(req, res) {
 
         if (!body && req.method === "POST") {
             const buffers = [];
-
-            for await (const chunk of req) {
-                buffers.push(chunk);
-            }
+            for await (const chunk of req) buffers.push(chunk);
 
             const raw = Buffer.concat(buffers).toString();
 
@@ -59,9 +56,9 @@ export default async function handler(req, res) {
             }
         }
 
-        const ip = req.headers["x-forwarded-for"] || "unknown";
+        // ✅ IP corrigido (Vercel manda lista)
+        const ip = (req.headers["x-forwarded-for"] || "").split(",")[0] || "unknown";
 
-        // ✅ Rate limit ativo
         if (!checkRateLimit(ip)) {
             return res.status(429).json({ error: "Muitos cliques" });
         }
@@ -82,15 +79,13 @@ export default async function handler(req, res) {
         async function getUserFromToken(token) {
             if (!token) return null;
 
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from("users")
                 .select("*")
                 .eq("token", token.trim())
-                .single();
+                .maybeSingle();
 
-            if (error || !data) return null;
-
-            return data;
+            return data || null;
         }
 
         // ================= REGISTER =================
@@ -155,14 +150,16 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Login inválido" });
             }
 
-            return res.json({ token: user.token });
+            return res.json({
+                token: user.token,
+                user: { id: user.id } // 🔥 importante pro frontend
+            });
         }
 
         // ================= GET USER =================
         if (action === "getUser") {
 
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
+            const user = await getUserFromToken(extractToken(req));
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
@@ -177,8 +174,7 @@ export default async function handler(req, res) {
         // ================= CREATE AD =================
         if (action === "createAd") {
 
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
+            const user = await getUserFromToken(extractToken(req));
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
@@ -210,70 +206,16 @@ export default async function handler(req, res) {
             return res.json({ success: true });
         }
 
-        // ================= MY ADS =================
-        if (action === "myAds") {
-
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
-
-            if (!user) {
-                return res.status(401).json({ error: "Não autorizado" });
-            }
+        // ================= LIST ADS =================
+        if (action === "listAds") {
 
             const { data } = await supabase
                 .from("ads")
                 .select("*")
-                .eq("user_id", user.id)
+                .eq("status", "active")
                 .order("created_at", { ascending: false });
 
             return res.json(data);
-        }
-
-        // ================= WEBHOOK =================
-        if (action === "webhook") {
-
-            if (!stripe) {
-                return res.status(500).json({ error: "Stripe não configurado" });
-            }
-
-            let event;
-
-            try {
-                event = JSON.parse(JSON.stringify(body));
-            } catch {
-                return res.status(400).json({ error: "Webhook inválido" });
-            }
-
-            if (event.type === "checkout.session.completed") {
-
-                const session = event.data.object;
-
-                const userId = session.metadata.user_id;
-                const amount = Number(session.metadata.amount);
-
-                const { data: user } = await supabase
-                    .from("users")
-                    .select("balance")
-                    .eq("id", userId)
-                    .single();
-
-                if (user) {
-                    await supabase
-                        .from("users")
-                        .update({ balance: user.balance + amount })
-                        .eq("id", userId);
-
-                    await supabase
-                        .from("transactions")
-                        .insert([{
-                            user_id: userId,
-                            amount,
-                            type: "deposit"
-                        }]);
-                }
-            }
-
-            return res.json({ received: true });
         }
 
         // ================= CLICK =================
@@ -329,15 +271,15 @@ export default async function handler(req, res) {
 
             const { adId } = body;
 
+            if (!adId) return res.json({ ok: true });
+
             const { data: ad } = await supabase
                 .from("ads")
                 .select("views")
                 .eq("id", adId)
-                .single();
+                .maybeSingle();
 
-            if (!ad) {
-                return res.status(404).json({ error: "Ad não encontrado" });
-            }
+            if (!ad) return res.json({ ok: true });
 
             await supabase
                 .from("ads")
@@ -347,42 +289,10 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
-        // ================= LIST ADS =================
-        if (action === "listAds") {
-
-            const { data } = await supabase
-                .from("ads")
-                .select("*")
-                .eq("status", "active")
-                .order("score", { ascending: false });
-
-            return res.json(data);
-        }
-
-        // ================= TRANSACTIONS =================
-        if (action === "transactions") {
-
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
-
-            if (!user) {
-                return res.status(401).json({ error: "Não autorizado" });
-            }
-
-            const { data } = await supabase
-                .from("transactions")
-                .select("*")
-                .eq("user_id", user.id)
-                .order("created_at", { ascending: false });
-
-            return res.json(data);
-        }
-
-        // ================= TOGGLE =================
+        // ================= TOGGLE (CORRIGIDO) =================
         if (action === "toggleAd") {
 
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
+            const user = await getUserFromToken(extractToken(req));
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
@@ -390,55 +300,30 @@ export default async function handler(req, res) {
 
             const { id, status } = body;
 
+            if (!id || !["active", "paused"].includes(status)) {
+                return res.status(400).json({ error: "Dados inválidos" });
+            }
+
+            const { data: ad } = await supabase
+                .from("ads")
+                .select("*")
+                .eq("id", id)
+                .maybeSingle();
+
+            if (!ad) {
+                return res.status(404).json({ error: "Anúncio não encontrado" });
+            }
+
+            if (ad.user_id !== user.id) {
+                return res.status(403).json({ error: "Sem permissão" });
+            }
+
             await supabase
                 .from("ads")
                 .update({ status })
-                .eq("id", id)
-                .eq("user_id", user.id);
+                .eq("id", id);
 
-            return res.json({ ok: true });
-        }
-
-        // ================= CHECKOUT =================
-        if (action === "createCheckout") {
-
-            if (!stripe) {
-                return res.status(500).json({ error: "Stripe não configurado" });
-            }
-
-            const token = extractToken(req);
-            const user = await getUserFromToken(token);
-
-            if (!user) {
-                return res.status(401).json({ error: "Não autorizado" });
-            }
-
-            const { amount } = body;
-
-            if (!amount || amount <= 0) {
-                return res.status(400).json({ error: "Valor inválido" });
-            }
-
-            const session = await stripe.checkout.sessions.create({
-                payment_method_types: ["card"],
-                mode: "payment",
-                line_items: [{
-                    price_data: {
-                        currency: "brl",
-                        product_data: { name: "Adicionar saldo" },
-                        unit_amount: Math.round(amount * 100)
-                    },
-                    quantity: 1
-                }],
-                success_url: `${process.env.BASE_URL}?success=true`,
-                cancel_url: `${process.env.BASE_URL}?cancel=true`,
-                metadata: {
-                    user_id: user.id,
-                    amount: String(amount)
-                }
-            });
-
-            return res.json({ url: session.url });
+            return res.json({ success: true });
         }
 
         return res.status(400).json({ error: "Ação inválida" });
