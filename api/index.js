@@ -2,29 +2,45 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
-//import { checkRateLimit } from "../lib/rateLimit";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// ✅ Stripe seguro
+const stripe = process.env.STRIPE_SECRET_KEY
+    ? new Stripe(process.env.STRIPE_SECRET_KEY)
+    : null;
+
+// ✅ Rate limit fora do handler (funciona melhor)
+const clicks = new Map();
+
+function checkRateLimit(ip) {
+    const now = Date.now();
+
+    if (!clicks.has(ip)) {
+        clicks.set(ip, []);
+    }
+
+    const history = clicks.get(ip);
+    const filtered = history.filter(t => now - t < 30000);
+
+    filtered.push(now);
+    clicks.set(ip, filtered);
+
+    return filtered.length <= 5;
+}
 
 export default async function handler(req, res) {
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+        return res.status(500).json({ error: "ENV não configurada" });
+    }
 
     const supabase = createClient(
         process.env.SUPABASE_URL,
         process.env.SUPABASE_ANON_KEY
     );
 
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-        return res.status(500).json({
-            error: "ENV não configurada"
-        });
-    }
-
     try {
 
-        console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
-        console.log("SUPABASE_KEY:", process.env.SUPABASE_ANON_KEY ? "OK" : "MISSING");
-
-        // ✅ BODY PARSER MANUAL (AGORA NO LUGAR CERTO)
+        // ================= BODY =================
         let body = req.body;
 
         if (!body && req.method === "POST") {
@@ -45,9 +61,10 @@ export default async function handler(req, res) {
 
         const ip = req.headers["x-forwarded-for"] || "unknown";
 
-       /* if (!checkRateLimit(ip)) {
+        // ✅ Rate limit ativo
+        if (!checkRateLimit(ip)) {
             return res.status(429).json({ error: "Muitos cliques" });
-        }*/
+        }
 
         const { action } = req.query;
 
@@ -75,8 +92,6 @@ export default async function handler(req, res) {
 
             return data;
         }
-
-
 
         // ================= REGISTER =================
         if (action === "register") {
@@ -140,19 +155,14 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Login inválido" });
             }
 
-            return res.json({
-                token: user.token
-            });
+            return res.json({ token: user.token });
         }
 
         // ================= GET USER =================
         if (action === "getUser") {
 
             const token = extractToken(req);
-
             const user = await getUserFromToken(token);
-
-            console.log("TOKEN RECEBIDO:", token);
 
             if (!user) {
                 return res.status(401).json({ error: "Não autorizado" });
@@ -176,7 +186,7 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid } = body;
 
-            if (!title || !link || bid === undefined || bid === null || bid <= 0) {
+            if (!title || !link || !bid || bid <= 0) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
@@ -194,7 +204,6 @@ export default async function handler(req, res) {
                 }]);
 
             if (error) {
-                console.error(error);
                 return res.status(400).json({ error: "Erro ao criar anúncio" });
             }
 
@@ -220,20 +229,19 @@ export default async function handler(req, res) {
             return res.json(data);
         }
 
-        // ================= OPTIMIZE ADS =================
+        // ================= WEBHOOK =================
         if (action === "webhook") {
-            const sig = req.headers["stripe-signature"];
+
+            if (!stripe) {
+                return res.status(500).json({ error: "Stripe não configurado" });
+            }
 
             let event;
 
             try {
-                event = stripe.webhooks.constructEvent(
-                    req.rawBody,
-                    sig,
-                    process.env.STRIPE_WEBHOOK_SECRET
-                );
-            } catch (err) {
-                return res.status(400).send(`Webhook Error: ${err.message}`);
+                event = JSON.parse(JSON.stringify(body));
+            } catch {
+                return res.status(400).json({ error: "Webhook inválido" });
             }
 
             if (event.type === "checkout.session.completed") {
@@ -249,26 +257,26 @@ export default async function handler(req, res) {
                     .eq("id", userId)
                     .single();
 
-                await supabase
-                    .from("users")
-                    .update({
-                        balance: user.balance + amount
-                    })
-                    .eq("id", userId);
+                if (user) {
+                    await supabase
+                        .from("users")
+                        .update({ balance: user.balance + amount })
+                        .eq("id", userId);
 
-                await supabase
-                    .from("transactions")
-                    .insert([{
-                        user_id: userId,
-                        amount,
-                        type: "deposit"
-                    }]);
+                    await supabase
+                        .from("transactions")
+                        .insert([{
+                            user_id: userId,
+                            amount,
+                            type: "deposit"
+                        }]);
+                }
             }
 
             return res.json({ received: true });
         }
 
-        // ================= CLICK AD =================
+        // ================= CLICK =================
         if (action === "click") {
 
             const { adId } = body;
@@ -293,7 +301,6 @@ export default async function handler(req, res) {
                 .eq("id", ad.user_id)
                 .single();
 
-            // 🔥 AQUI ENTRA A REGRA
             if (!user || user.balance < ad.bid) {
 
                 await supabase
@@ -304,13 +311,11 @@ export default async function handler(req, res) {
                 return res.json({ paused: true });
             }
 
-            // atualiza clique
             await supabase
                 .from("ads")
                 .update({ clicks: ad.clicks + 1 })
                 .eq("id", adId);
 
-            // desconta saldo
             await supabase
                 .from("users")
                 .update({ balance: user.balance - ad.bid })
@@ -319,7 +324,7 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
-        // ================= VIEW AD =================
+        // ================= VIEW =================
         if (action === "view") {
 
             const { adId } = body;
@@ -329,6 +334,10 @@ export default async function handler(req, res) {
                 .select("views")
                 .eq("id", adId)
                 .single();
+
+            if (!ad) {
+                return res.status(404).json({ error: "Ad não encontrado" });
+            }
 
             await supabase
                 .from("ads")
@@ -356,6 +365,10 @@ export default async function handler(req, res) {
             const token = extractToken(req);
             const user = await getUserFromToken(token);
 
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
             const { data } = await supabase
                 .from("transactions")
                 .select("*")
@@ -365,11 +378,15 @@ export default async function handler(req, res) {
             return res.json(data);
         }
 
-        // ================= TOGGLE AD =================
+        // ================= TOGGLE =================
         if (action === "toggleAd") {
 
             const token = extractToken(req);
             const user = await getUserFromToken(token);
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
 
             const { id, status } = body;
 
@@ -382,8 +399,12 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
-        // ================= CREATE CHECKOUT =================
+        // ================= CHECKOUT =================
         if (action === "createCheckout") {
+
+            if (!stripe) {
+                return res.status(500).json({ error: "Stripe não configurado" });
+            }
 
             const token = extractToken(req);
             const user = await getUserFromToken(token);
