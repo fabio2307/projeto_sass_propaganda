@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
-import { checkRateLimit } from "../lib/rateLimit";
+//import { checkRateLimit } from "../lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -45,9 +45,9 @@ export default async function handler(req, res) {
 
         const ip = req.headers["x-forwarded-for"] || "unknown";
 
-        if (!checkRateLimit(ip)) {
+       /* if (!checkRateLimit(ip)) {
             return res.status(429).json({ error: "Muitos cliques" });
-        }
+        }*/
 
         const { action } = req.query;
 
