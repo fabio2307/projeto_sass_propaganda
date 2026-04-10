@@ -6,12 +6,12 @@ import { checkRateLimit } from "../lib/rateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
-);
-
 export default async function handler(req, res) {
+
+    const supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_ANON_KEY
+    );
 
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
         return res.status(500).json({
