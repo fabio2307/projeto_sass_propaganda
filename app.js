@@ -110,7 +110,16 @@ async function login() {
         localStorage.setItem("userId", data.user.id);
 
         alert("Login realizado!");
-        window.location.href = "/";
+
+        // esconder login
+        document.getElementById("loginBox").classList.add("hidden");
+
+        // mostrar dashboard
+        document.getElementById("dashboard").classList.remove("hidden");
+
+        // carregar dados
+        await carregarSaldo();
+        await carregarAds();
 
     } catch (err) {
         console.error(err);
