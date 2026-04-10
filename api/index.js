@@ -327,8 +327,11 @@ export default async function handler(req, res) {
             }
 
             try {
+
+                const baseUrl = req.headers.origin || "https://projeto-sass-propaganda.vercel.app";
+
                 const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card", "pix"], // ✅ PIX adicionado
+                    payment_method_types: ["card", "boleto"], // ✅ aqui está o ajuste
                     mode: "payment",
                     line_items: [{
                         price_data: {
@@ -340,15 +343,19 @@ export default async function handler(req, res) {
                         },
                         quantity: 1
                     }],
-                    success_url: `${req.headers.origin}/?success=true`,
-                    cancel_url: `${req.headers.origin}/?cancel=true`
+                    success_url: `${baseUrl}/?success=true`,
+                    cancel_url: `${baseUrl}/?cancel=true`
                 });
 
                 return res.json({ url: session.url });
 
             } catch (err) {
-                console.error("Erro Stripe:", err);
-                return res.status(500).json({ error: "Erro ao criar pagamento" });
+                console.error("🔥 ERRO STRIPE:", err);
+
+                return res.status(500).json({
+                    error: "Erro ao criar pagamento",
+                    detalhe: err.message
+                });
             }
         }
 
