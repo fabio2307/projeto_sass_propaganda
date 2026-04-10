@@ -291,30 +291,54 @@ async function carregarAds() {
 }
 
 // ================= PAGAMENTO =================
-async function pagar() {
+if (action === "createCheckout") {
+
+    if (!stripe) {
+        return res.status(500).json({ error: "Stripe não configurado" });
+    }
+
+    const user = await getUserFromToken(extractToken(req));
+
+    if (!user) {
+        return res.status(401).json({ error: "Não autorizado" });
+    }
+
+    const { amount } = body;
+
+    if (!amount || amount <= 0) {
+        return res.status(400).json({ error: "Valor inválido" });
+    }
+
     try {
-        const amount = Number(document.getElementById("valor").value);
 
-        if (!amount || amount <= 0) {
-            throw new Error("Valor inválido");
-        }
+        const baseUrl = req.headers.origin || "https://projeto-sass-propaganda.vercel.app";
 
-        const res = await fetch(`${API}?action=createCheckout`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${getToken()}`
-            },
-            body: JSON.stringify({ amount })
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card", "boleto"], // ✅ aqui está o ajuste
+            mode: "payment",
+            line_items: [{
+                price_data: {
+                    currency: "brl",
+                    product_data: {
+                        name: "Adicionar saldo"
+                    },
+                    unit_amount: Math.round(amount * 100)
+                },
+                quantity: 1
+            }],
+            success_url: `${baseUrl}/?success=true`,
+            cancel_url: `${baseUrl}/?cancel=true`
         });
 
-        const data = await safeJson(res);
-
-        // ✅ abre em nova guia
-        window.open(data.url, "_blank");
+        return res.json({ url: session.url });
 
     } catch (err) {
-        alert(err.message);
+        console.error("🔥 ERRO STRIPE:", err);
+
+        return res.status(500).json({
+            error: "Erro ao criar pagamento",
+            detalhe: err.message
+        });
     }
 }
 
