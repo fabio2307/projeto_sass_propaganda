@@ -75,10 +75,8 @@
                         <span>📊 ${ctr}%</span>
                     </div>
 
-                    <div class="ad-extra">
-                        <span>💰 Bid: ${ad.bid}</span>
-                        <span>📌 Status: ${ad.status || "active"}</span>
-                    </div>
+                    <!-- 🔥 Destaque baseado no bid (sem mostrar valor) -->
+                    ${ad.bid > 50 ? `<div class="badge">🔥 Destaque</div>` : ""}
 
                 </div>
                 `;
