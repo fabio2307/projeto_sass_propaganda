@@ -108,6 +108,7 @@ async function login() {
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
+        window.location.href = "/dashboard.html";
 
         alert("Login realizado!");
 

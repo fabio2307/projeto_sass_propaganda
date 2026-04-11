@@ -189,3 +189,26 @@ button {
   border-radius: 10px;
   color: white;
 }
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+}
+
+.ads {
+  padding: 20px;
+}
+
+.dashboard {
+  padding: 20px;
+}
+
+.card {
+  margin-bottom: 10px;
+}
+
+.ad-card {
+  margin: 5px;
+}
