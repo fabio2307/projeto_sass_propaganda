@@ -261,46 +261,94 @@ export default async function handler(req, res) {
             const { adId } = body;
 
             if (!adId) {
-                return res.status(400).json({ error: "Ad inválido" });
+                return res.status(400).json({ error: "AdId obrigatório" });
             }
 
+            // 🔒 pega IP real
+            const ip =
+                req.headers["x-forwarded-for"]?.split(",")[0] ||
+                req.socket.remoteAddress;
+
+            // ⏱️ bloqueia clique repetido (últimos 30 segundos)
+            const { data: recentClick } = await supabase
+                .from("ad_clicks")
+                .select("*")
+                .eq("ad_id", adId)
+                .eq("ip", ip)
+                .gte("created_at", new Date(Date.now() - 30000).toISOString())
+                .maybeSingle();
+
+            if (recentClick) {
+                return res.json({ blocked: true });
+            }
+
+            // 🔥 registra clique
+            await supabase
+                .from("ad_clicks")
+                .insert([{ ad_id: adId, ip }]);
+
+            // 🔎 pega anúncio
             const { data: ad } = await supabase
                 .from("ads")
                 .select("*")
                 .eq("id", adId)
-                .single();
+                .maybeSingle();
 
             if (!ad) {
                 return res.status(404).json({ error: "Ad não encontrado" });
             }
 
+            // 🔎 pega usuário dono do anúncio
             const { data: user } = await supabase
                 .from("users")
                 .select("*")
                 .eq("id", ad.user_id)
-                .single();
+                .maybeSingle();
 
-            if (!user || user.balance < ad.bid) {
+            if (!user) {
+                return res.status(404).json({ error: "Usuário não encontrado" });
+            }
 
+            // 💰 custo por clique
+            const cost = (ad.bid || 0) * 0.05;
+
+            // ❌ sem saldo → pausa anúncio
+            if ((user.balance || 0) < cost) {
                 await supabase
                     .from("ads")
                     .update({ status: "paused" })
-                    .eq("id", ad.id);
+                    .eq("id", adId);
 
                 return res.json({ paused: true });
             }
 
-            await supabase
-                .from("ads")
-                .update({ clicks: ad.clicks + 1 })
-                .eq("id", adId);
+            // 💸 desconta do usuário (AGORA CORRETO)
+            const newUserBalance = user.balance - cost;
 
             await supabase
                 .from("users")
-                .update({ balance: user.balance - ad.bid })
+                .update({ balance: newUserBalance })
                 .eq("id", user.id);
 
-            return res.json({ ok: true });
+            // 📊 atualiza anúncio (SEM MEXER EM BALANCE DELE)
+            await supabase
+                .from("ads")
+                .update({
+                    clicks: (ad.clicks || 0) + 1
+                })
+                .eq("id", adId);
+
+            // 🧾 REGISTRO FINANCEIRO (AQUI!)
+            await supabase
+                .from("transactions")
+                .insert([{
+                    user_id: user.id,
+                    amount: -cost,
+                    type: "click",
+                    ad_id: ad.id
+                }]);
+
+            return res.json({ success: true });
         }
 
         // ================= VIEW =================

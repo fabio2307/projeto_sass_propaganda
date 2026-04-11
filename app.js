@@ -248,11 +248,18 @@ async function registrarClick(adId) {
 
         const data = await res.json();
 
+        // 🚫 bloqueio imediato
+        if (data?.blocked) {
+            console.log("Clique bloqueado por segurança");
+            return;
+        }
+
         // 🔥 tratamento de resposta
         if (data?.paused) {
             alert("⚠️ Anúncio pausado por saldo insuficiente");
         }
 
+        // 🚨 erro da API
         if (data?.error) {
             console.error("Erro da API:", data.error);
         }
@@ -260,6 +267,7 @@ async function registrarClick(adId) {
         const lastClick = localStorage.getItem(key);
         const now = Date.now();
 
+        // ⏳ bloqueio de clique repetido (1 por minuto)
         if (lastClick && now - lastClick < 60000) {
             console.log("Aguarde antes de clicar novamente");
             return;
