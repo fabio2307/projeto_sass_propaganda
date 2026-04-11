@@ -228,15 +228,47 @@ function renderAds(ads) {
 // ================= CLICK =================
 async function registrarClick(adId) {
     try {
-        await fetch(`${API}?action=click`, {
+        // 🔒 antifraude (1 clique por sessão)
+        const key = `clicked_${adId}`;
+
+        if (sessionStorage.getItem(key)) {
+            console.log("Clique já registrado nesta sessão");
+            return;
+        }
+
+        sessionStorage.setItem(key, "true");
+
+        const res = await fetch(`${API}?action=click`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({ adId })
         });
-    } catch {
-        console.error("Erro ao registrar clique");
+
+        const data = await res.json();
+
+        // 🔥 tratamento de resposta
+        if (data?.paused) {
+            alert("⚠️ Anúncio pausado por saldo insuficiente");
+        }
+
+        if (data?.error) {
+            console.error("Erro da API:", data.error);
+        }
+
+        const lastClick = localStorage.getItem(key);
+        const now = Date.now();
+
+        if (lastClick && now - lastClick < 60000) {
+            console.log("Aguarde antes de clicar novamente");
+            return;
+        }
+
+        localStorage.setItem(key, now);
+
+    } catch (err) {
+        console.error("Erro ao registrar clique", err);
     }
 }
 

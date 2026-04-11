@@ -232,18 +232,27 @@ export default async function handler(req, res) {
         // ================= LIST ADS =================
         if (action === "listAds") {
 
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from("ads")
                 .select("*")
-                .eq("status", "active")
-                .order("created_at", { ascending: false });
+                .eq("status", "active");
 
-            if (error) {
-                console.error("Erro Supabase:", error);
-                return res.status(500).json({ error: "Erro ao buscar anúncios" });
+            if (!data) {
+                return res.json([]);
             }
 
-            return res.json(data || []); // 👈 GARANTE ARRAY
+            // 🔥 ranking inteligente
+            const rankedAds = data.map(ad => {
+                const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
+
+                return {
+                    ...ad,
+                    score: (ad.bid || 0) * 0.7 + ctr * 100 * 0.3
+                };
+            })
+                .sort((a, b) => b.score - a.score);
+
+            return res.json(rankedAds);
         }
 
         // ================= CLICK =================

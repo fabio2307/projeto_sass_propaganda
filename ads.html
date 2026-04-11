@@ -70,13 +70,14 @@
                     </a>
 
                     <div class="ad-metrics">
-                        <span>👁 ${ad.views}</span>
-                        <span>🖱 ${ad.clicks}</span>
-                        <span>📊 ${ctr}%</span>
+                    <span>👁 ${ad.views} visualizações</span>
+                    <span>🖱 ${ad.clicks} cliques</span>
+                    <span>📊 ${ctr}% de engajamento</span>
                     </div>
 
                     <!-- 🔥 Destaque baseado no bid (sem mostrar valor) -->
-                    ${ad.bid > 50 ? `<div class="badge">🔥 Destaque</div>` : ""}
+                    ${ad.bid >= 100 ? `<div class="premium">💎 Premium</div>` : ""}
+                    ${ad.bid >= 50 && ad.bid < 100 ? `<div class="badge">🔥 Destaque</div>` : ""}
 
                 </div>
                 `;
