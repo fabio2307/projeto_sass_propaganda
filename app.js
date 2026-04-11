@@ -108,7 +108,7 @@ async function login() {
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
-        window.location.href = "/dashboard.html";
+        window.location.href = "/index.html";
 
         alert("Login realizado!");
 
@@ -148,6 +148,14 @@ async function init() {
         carregarSaldo();
         window.history.replaceState({}, document.title, "/");
     }
+}
+
+const token = localStorage.getItem("token");
+
+if (token) {
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("registerBox").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
 }
 
 // ================= SALDO =================
@@ -425,6 +433,12 @@ document.addEventListener("DOMContentLoaded", () => {
 // ================= EXPORTS PARA HTML =================
 if (document.getElementById("email")) {
     window.login = login;
+}
+
+// ================= LOGOUT =================
+function logout() {
+    localStorage.removeItem("token");
+    window.location.href = "/index.html";
 }
 
 // ================= EXPORT =================

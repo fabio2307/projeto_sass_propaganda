@@ -13,7 +13,8 @@
         <h2>📊 Meu Dashboard</h2>
 
         <div class="menu">
-            <a href="/ads.html" class="btn">🏠 Anúncios</a>
+            <a href="/index.html" class="btn">➕ Criar anúncio</a>
+            <a href="/ads.html" class="btn">🔥 Anúncios</a>
             <button onclick="logout()" class="btn-logout">🚪 Sair</button>
         </div>
     </div>
@@ -35,7 +36,7 @@
     <h3 style="padding:20px;">📢 Meus Anúncios</h3>
     <div class="ads" id="ads"></div>
 
-    // Carrega dados do dashboard
+    <!-- Carrega dados do dashboard -->
     <script>
         const API = "/api";
 
@@ -97,7 +98,7 @@
         carregarDashboard();
     </script>
 
-    // Logout simples
+    <!-- Logout simples -->
     <script>
         function logout() {
             localStorage.removeItem("token");
