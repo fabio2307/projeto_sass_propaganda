@@ -18,14 +18,23 @@
     <script>
         const API = "/api";
 
+        // 🔥 SIMULA USUÁRIO LOGADO
         async function carregarAdsPublicos() {
             try {
                 const res = await fetch(`${API}?action=listAds`);
 
                 const data = await res.json();
 
+                console.log("API resposta:", data); // 👈 DEBUG
+
                 if (!Array.isArray(data)) {
-                    console.error("Erro API:", data);
+                    console.error("Erro da API:", data);
+                    return;
+                }
+
+                if (data.length === 0) {
+                    document.getElementById("ads").innerHTML =
+                        "<p>Nenhum anúncio disponível</p>";
                     return;
                 }
 
@@ -36,6 +45,7 @@
             }
         }
 
+        // 🔥 RENDERIZA ANÚNCIOS
         function renderAds(ads) {
             const container = document.getElementById("ads");
 
@@ -91,6 +101,7 @@
             }).join("");
         }
 
+        // 🔥 REGISTRA CLIQUE E TRATA PAUSE
         async function registrarClick(adId) {
             try {
                 const res = await fetch(`${API}?action=click`, {
