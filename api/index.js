@@ -463,6 +463,45 @@ export default async function handler(req, res) {
             return res.json({ success: true });
         }
 
+        // ================= DASHBOARD =================
+        if (action === "dashboard") {
+
+            const user = await getUserFromToken(extractToken(req));
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            // 📢 anúncios do usuário
+            const { data: ads } = await supabase
+                .from("ads")
+                .select("*")
+                .eq("user_id", user.id);
+
+            // 💰 saldo
+            const { data: userData } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            // 🧾 total gasto
+            const { data: transactions } = await supabase
+                .from("transactions")
+                .select("amount")
+                .eq("user_id", user.id);
+
+            const totalSpent = transactions
+                ?.filter(t => t.amount < 0)
+                .reduce((acc, t) => acc + Math.abs(t.amount), 0) || 0;
+
+            return res.json({
+                balance: userData?.balance || 0,
+                totalSpent,
+                ads
+            });
+        }
+
         return res.status(400).json({ error: "Ação inválida" });
 
     } catch (err) {

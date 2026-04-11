@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <div class="topbar">
+        <h2>📊 Meu Dashboard</h2>
+    </div>
+
+    <div class="dashboard">
+
+        <div class="card">
+            <h3>💰 Saldo</h3>
+            <p id="balance">...</p>
+        </div>
+
+        <div class="card">
+            <h3>📉 Total gasto</h3>
+            <p id="spent">...</p>
+        </div>
+
+    </div>
+
+    <h3 style="padding:20px;">📢 Meus Anúncios</h3>
+    <div class="ads" id="ads"></div>
+
+    <script>
+        const API = "/api";
+
+        async function carregarDashboard() {
+
+            const token = localStorage.getItem("token");
+
+            if (!token) {
+                window.location.href = "/login.html";
+                return;
+            }
+
+            const res = await fetch(`${API}?action=dashboard`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            const data = await res.json();
+
+            document.getElementById("balance").innerText =
+                "R$ " + data.balance.toFixed(2);
+
+            document.getElementById("spent").innerText =
+                "R$ " + data.totalSpent.toFixed(2);
+
+            renderAds(data.ads);
+        }
+
+        function renderAds(ads) {
+            const container = document.getElementById("ads");
+
+            container.innerHTML = ads.map(ad => {
+
+                const ctr = ad.views > 0
+                    ? ((ad.clicks / ad.views) * 100).toFixed(1)
+                    : 0;
+
+                return `
+                <div class="ad-card">
+
+                    <h3>${ad.title}</h3>
+
+                    <div class="ad-metrics">
+                        <span>👁 ${ad.views}</span>
+                        <span>🖱 ${ad.clicks}</span>
+                        <span>📊 ${ctr}% CTR</span>
+                    </div>
+
+                    <div>
+                        Status: ${ad.status}
+                    </div>
+
+                </div>
+                `;
+            }).join("");
+        }
+
+        carregarDashboard();
+    </script>
+
+</body>
+</html>

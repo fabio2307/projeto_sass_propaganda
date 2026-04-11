@@ -176,3 +176,16 @@ button {
   display: inline-block;
   margin-top: 8px;
 }
+
+.dashboard {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+}
+
+.card {
+  background: #111;
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+}
