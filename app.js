@@ -339,17 +339,17 @@ async function pagar() {
 // ================= TOGGLE AD =================
 async function toggleAd(adId, status) {
     try {
-        const userId = localStorage.getItem("userId");
+        const token = localStorage.getItem("token"); // 👈 IMPORTANTE
 
-        const res = await fetch(`${API}?action=toggleAd`, {
+        const res = await fetch(`/api?action=toggleAd`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}` // 👈 AQUI ESTÁ O SEGREDO
             },
             body: JSON.stringify({
-                adId,
-                status: status === "active" ? "paused" : "active",
-                userId // 👈 ESSENCIAL
+                id: adId, // 👈 backend espera "id"
+                status: status === "active" ? "paused" : "active"
             })
         });
 
@@ -360,7 +360,12 @@ async function toggleAd(adId, status) {
             return;
         }
 
-        carregarAds(); // ou fallback
+        // atualiza lista
+        if (typeof carregarAds === "function") {
+            carregarAds();
+        } else if (typeof carregarAdsPublicos === "function") {
+            carregarAdsPublicos();
+        }
 
     } catch (err) {
         console.error(err);
