@@ -34,7 +34,7 @@ function setToken(token) {
 // ================= LOGOUT =================
 function logout() {
     localStorage.clear();
-    location.reload();
+    window.location.href = "/index.html";
 }
 
 // ================= LOGIN/REGISTER =================
@@ -106,21 +106,20 @@ async function login() {
 
         const data = await safeJson(res);
 
+        // salvar sessão
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
-        window.location.href = "/index.html";
 
-        alert("Login realizado!");
-
-        // esconder login
+        // trocar tela
         document.getElementById("loginBox").classList.add("hidden");
-
-        // mostrar dashboard
         document.getElementById("dashboard").classList.remove("hidden");
 
         // carregar dados
         await carregarSaldo();
         await carregarAds();
+
+        // feedback por último
+        alert("Login realizado!");
 
     } catch (err) {
         console.error(err);
@@ -148,14 +147,6 @@ async function init() {
         carregarSaldo();
         window.history.replaceState({}, document.title, "/");
     }
-}
-
-const token = localStorage.getItem("token");
-
-if (token) {
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("registerBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
 }
 
 // ================= SALDO =================
@@ -207,7 +198,7 @@ function renderAds(ads) {
             <h3>${ad.title}</h3>
             <p>${ad.description || ""}</p>
 
-            <a href="${ad.link}" target="_blank"
+            <a href="${ad.link}" target="_blank" rel="noopener noreferrer"
                onclick="registrarClick('${ad.id}')">
                 🔗 Ver oferta
             </a>
@@ -329,7 +320,6 @@ async function criarAd() {
         document.getElementById("description").value = "";
         document.getElementById("link").value = "";
         document.getElementById("bid").value = "";
-        document.getElementById("valor").value = "";
 
         await carregarAds();
 
@@ -430,24 +420,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// ================= EXPORTS PARA HTML =================
-if (document.getElementById("email")) {
-    window.login = login;
-}
-
-// ================= LOGOUT =================
-function logout() {
-    localStorage.removeItem("token");
-    window.location.href = "/index.html";
-}
 
 // ================= EXPORT =================
-
 window.register = register;
 window.pagar = pagar;
 window.logout = logout;
-window.init = init;
 window.carregarAds = carregarAds;
 window.showRegister = showRegister;
 window.showLogin = showLogin;
 window.criarAd = criarAd;
+document.addEventListener("DOMContentLoaded", init);
