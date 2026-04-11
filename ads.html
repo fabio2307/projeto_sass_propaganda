@@ -18,16 +18,17 @@
     <script>
         const API = "/api";
 
-        // 🔥 SIMULA USUÁRIO LOGADO
+        // 🔥 CARREGA ANÚNCIOS
         async function carregarAdsPublicos() {
             try {
                 const res = await fetch(`${API}?action=listAds`);
-
                 const data = await res.json();
 
-                console.log("API resposta:", data); // 👈 DEBUG
+                console.log("API resposta:", data);
 
                 if (!Array.isArray(data)) {
+                    document.getElementById("ads").innerHTML =
+                        "<p>Erro ao carregar anúncios</p>";
                     console.error("Erro da API:", data);
                     return;
                 }
@@ -42,6 +43,8 @@
 
             } catch (err) {
                 console.error(err);
+                document.getElementById("ads").innerHTML =
+                    "<p>Erro de conexão</p>";
             }
         }
 
@@ -49,59 +52,40 @@
         function renderAds(ads) {
             const container = document.getElementById("ads");
 
-            // 🔥 contabiliza views
-            ads.forEach(ad => {
-                fetch(`${API}?action=view`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ adId: ad.id })
-                });
-            });
-
             container.innerHTML = ads.map(ad => {
                 const ctr = ad.views > 0
                     ? ((ad.clicks / ad.views) * 100).toFixed(1)
                     : 0;
 
                 return `
-        <div class="ad-card">
+                <div class="ad-card">
 
-            <h3>${ad.title}</h3>
+                    <h3>${ad.title}</h3>
 
-            <p>${ad.description || ""}</p>
+                    <p>${ad.description || "Sem descrição"}</p>
 
-            <a href="${ad.link}" target="_blank"
-               onclick="registrarClick('${ad.id}')">
-                🔗 Ver oferta
-            </a>
+                    <a href="${ad.link}" target="_blank"
+                       onclick="registrarClick('${ad.id}')">
+                        🔗 Ver oferta
+                    </a>
 
-            <div class="ad-metrics">
-                <span>👁 ${ad.views}</span>
-                <span>🖱 ${ad.clicks}</span>
-                <span>📊 ${ctr}%</span>
-            </div>
+                    <div class="ad-metrics">
+                        <span>👁 ${ad.views}</span>
+                        <span>🖱 ${ad.clicks}</span>
+                        <span>📊 ${ctr}%</span>
+                    </div>
 
-            <!-- 🔥 NOVO -->
-            <div class="ad-extra">
-                <span>💰 Bid: ${ad.bid}</span>
-                <span>📌 Status: ${ad.status || "active"}</span>
-            </div>
+                    <div class="ad-extra">
+                        <span>💰 Bid: ${ad.bid}</span>
+                        <span>📌 Status: ${ad.status || "active"}</span>
+                    </div>
 
-            <!-- 🔥 BOTÃO -->
-            ${ad.user_id === userId ? `
-                <button onclick="toggleAd('${ad.id}', '${ad.status}')">
-                    ${ad.status === "active" ? "⏸ Pausar" : "▶ Ativar"}
-                </button>
-            ` : ""}
-
-        </div>
-        `;
+                </div>
+                `;
             }).join("");
         }
 
-        // 🔥 REGISTRA CLIQUE E TRATA PAUSE
+        // 🔥 REGISTRA CLIQUE
         async function registrarClick(adId) {
             try {
                 const res = await fetch(`${API}?action=click`, {
@@ -114,7 +98,6 @@
 
                 const data = await res.json();
 
-                // 🔥 AQUI TRATA O PAUSE
                 if (data.paused) {
                     alert("Anúncio pausado por saldo insuficiente");
                 }
@@ -124,6 +107,7 @@
             }
         }
 
+        // 🚀 INICIA
         carregarAdsPublicos();
     </script>
 
