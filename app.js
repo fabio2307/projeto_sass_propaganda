@@ -70,7 +70,7 @@ async function register() {
             },
             body: JSON.stringify({
                 name: document.getElementById("registerName").value,
-                age: Number(document.getElementById("registerAge").value),
+                birthDate: document.getElementById("registerBirth").value,
                 email: document.getElementById("registerEmail").value,
                 password: document.getElementById("registerPassword").value
             })

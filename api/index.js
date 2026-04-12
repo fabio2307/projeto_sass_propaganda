@@ -96,7 +96,7 @@ export default async function handler(req, res) {
         // ================= REGISTER =================
         if (action === "register") {
 
-            const { name, age, email, password } = body;
+            const { name, birthDate, email, password } = body;
 
             if (!name || !email || !password) {
                 return res.status(400).json({ error: "Dados inválidos" });
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
                 .from("users")
                 .insert([{
                     name,
-                    age: age || null,
+                    birth_date: birthDate || null,
                     email,
                     password: hash,
                     token,
@@ -128,7 +128,8 @@ export default async function handler(req, res) {
                 }]);
 
             if (error) {
-                return res.status(400).json({ error: "Erro ao criar conta" });
+                console.error("ERRO SUPABASE:", error);
+                return res.status(400).json({ error: error.message });
             }
 
             return res.json({ ok: true });
