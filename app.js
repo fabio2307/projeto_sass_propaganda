@@ -80,11 +80,20 @@ async function register() {
 
         alert("Conta criada com sucesso!");
         showLogin();
+        limparCamposCadastro();
 
     } catch (err) {
         console.error(err);
         alert("Erro: " + err.message);
     }
+}
+
+// ================= LIMPAR CAMPOS DE CADASTRO =================
+function limparCamposCadastro() {
+    document.getElementById("name").value = "";
+    document.getElementById("email").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("birthdate").value = "";
 }
 
 // ================= LOGIN =================
