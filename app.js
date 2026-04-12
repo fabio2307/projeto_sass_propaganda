@@ -335,10 +335,25 @@ async function criarAd() {
         const title = document.getElementById("title").value;
         const description = document.getElementById("description").value;
         const link = document.getElementById("link").value;
-        const bid = Number(document.getElementById("bid").value);
+        const bid = parseMoney(document.getElementById("bid").value);
 
         if (!title || !link || isNaN(bid) || bid <= 0) {
             throw new Error("Preencha os campos corretamente");
+        }
+
+        if (bid < 1) {
+            throw new Error("Valor mínimo do lance é R$ 1,00");
+        }
+
+        if (!description || description.length < 10) {
+            throw new Error("Descrição muito curta");
+        }
+
+        // ✅ valida link antes
+        try {
+            new URL(link);
+        } catch {
+            throw new Error("Link inválido");
         }
 
         const res = await fetch(`${API}?action=createAd`, {
@@ -359,12 +374,6 @@ async function criarAd() {
         document.getElementById("link").value = "";
         document.getElementById("bid").value = "";
         document.getElementById("title").focus();
-
-        try {
-            new URL(link);
-        } catch {
-            throw new Error("Link inválido");
-        }
 
         await carregarAds();
 
@@ -443,6 +452,32 @@ function formatarMoeda(input) {
     value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
     input.value = "R$ " + value;
+}
+
+// ================= MÁSCARA DE MOEDA =================
+const bidInput = document.getElementById("bid");
+
+if (bidInput) {
+    bidInput.addEventListener("input", (e) => {
+        let v = e.target.value.replace(/\D/g, "");
+
+        v = (Number(v) / 100).toFixed(2) + "";
+
+        v = v.replace(".", ",");
+
+        v = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+        e.target.value = "R$ " + v;
+    });
+}
+
+// ================= PARSE DE MOEDA =================
+function parseMoney(value) {
+    return Number(
+        value.replace("R$ ", "")
+            .replace(/\./g, "")
+            .replace(",", ".")
+    );
 }
 
 // ================= INICIALIZAÇÃO =================

@@ -8,23 +8,28 @@ body {
 
 /* LOGIN */
 .center-box {
-  .center-box {
-    width: 320px;
-    margin: 80px auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    background: #020617;
-    padding: 25px;
-    border-radius: 12px;
-    border: 1px solid #1e293b;
-  }
+  width: 340px;
+  margin: 100px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #020617;
+  padding: 30px 25px;
+  border-radius: 16px;
+  border: 1px solid #1e293b;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.center-box h2 {
+  text-align: center;
+  margin-bottom: 10px;
 }
 
 /* TOPO */
 .topbar {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 15px 25px;
   background: #020617;
   border-bottom: 1px solid #1e293b;
@@ -195,13 +200,6 @@ button {
   color: white;
 }
 
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-}
-
 .ads {
   padding: 20px;
 }
@@ -238,4 +236,8 @@ button {
   border-radius: 12px;
   border: 1px solid #1e293b;
   max-width: 300px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* 🔥 resolve o espaçamento */
 }
