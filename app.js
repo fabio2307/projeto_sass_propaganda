@@ -13,6 +13,17 @@ async function safeJson(res) {
         throw new Error("Erro inesperado do servidor");
     }
 
+    // 🔥 TRATAMENTO DE TOKEN EXPIRADO
+    if (res.status === 401 || data.error === "Token inválido") {
+        localStorage.clear();
+
+        alert("Sessão expirada. Faça login novamente.");
+
+        window.location.href = "/index.html";
+
+        return; // importante pra parar execução
+    }
+
     if (!res.ok) {
         throw new Error(data.error || "Erro desconhecido");
     }
@@ -78,22 +89,27 @@ async function register() {
 
 // ================= LOGIN =================
 async function login() {
+    const btn = document.getElementById("btnLogin");
+
     try {
+        // 🔒 ativa loading
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = "Entrando...";
+        }
+
         const emailInput = document.getElementById("loginEmail");
         const passwordInput = document.getElementById("loginPassword");
 
         if (!emailInput || !passwordInput) {
-            console.error("Campos de login não encontrados na página");
-            alert("Erro de interface. Recarregue a página.");
-            return;
+            throw new Error("Erro de interface. Recarregue a página.");
         }
 
         const email = emailInput.value;
         const password = passwordInput.value;
 
         if (!email || !password) {
-            alert("Preencha email e senha");
-            return;
+            throw new Error("Preencha email e senha");
         }
 
         const res = await fetch(`${API}?action=login`, {
@@ -118,34 +134,18 @@ async function login() {
         await carregarSaldo();
         await carregarAds();
 
-        // feedback por último
         alert("Login realizado!");
 
     } catch (err) {
         console.error(err);
         alert("Erro no login: " + err.message);
-    }
-}
 
-// ================= INIT =================
-async function init() {
-    const token = getToken();
-
-    if (!token) {
-        console.log("❌ Sem token");
-        return;
-    }
-
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
-
-    await carregarSaldo();
-    await carregarAds();
-
-    if (window.location.search.includes("success")) {
-        alert("Pagamento aprovado!");
-        carregarSaldo();
-        window.history.replaceState({}, document.title, "/");
+    } finally {
+        // 🔓 SEMPRE libera botão (mesmo com erro)
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Entrar";
+        }
     }
 }
 
@@ -169,21 +169,42 @@ async function carregarSaldo() {
     }
 }
 
+// ================= ESCAPE HTML =================
+function escapeHTML(str) {
+    if (!str) return "";
+
+    return str.replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+    }[m]));
+}
+
 // ================= API =================
 function renderAds(ads) {
     const container = document.getElementById("ads");
-    const userId = localStorage.getItem("userId") || ""; // ✅ AQUI
+    const userId = localStorage.getItem("userId") || "";
 
     // 🔥 contabiliza views
     setTimeout(() => {
         ads.forEach(ad => {
-            fetch(`${API}?action=view`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ adId: ad.id })
-            });
+
+            const viewed = `viewed_${ad.id}`;
+
+            if (!sessionStorage.getItem(viewed)) {
+                sessionStorage.setItem(viewed, "true");
+
+                fetch(`${API}?action=view`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ adId: ad.id })
+                });
+            }
+
         });
     }, 1000);
 
@@ -195,10 +216,10 @@ function renderAds(ads) {
         return `
         <div class="ad-card">
 
-            <h3>${ad.title}</h3>
-            <p>${ad.description || ""}</p>
+            <h3>${escapeHTML(ad.title)}</h3>
+            <p>${escapeHTML(ad.description || "")}</p>
 
-            <a href="${ad.link}" target="_blank" rel="noopener noreferrer"
+            <a href="${escapeHTML(ad.link)}" target="_blank" rel="noopener noreferrer"
                onclick="registrarClick('${ad.id}')">
                 🔗 Ver oferta
             </a>
@@ -211,7 +232,7 @@ function renderAds(ads) {
 
             <div class="ad-extra">
                 <span>💰 Bid: ${ad.bid}</span>
-                <span>📌 Status: ${ad.status || "active"}</span>
+                <span>📌 Status: ${escapeHTML(ad.status || "active")}</span>
             </div>
 
             ${ad.user_id == userId ? `
@@ -320,6 +341,13 @@ async function criarAd() {
         document.getElementById("description").value = "";
         document.getElementById("link").value = "";
         document.getElementById("bid").value = "";
+        document.getElementById("title").focus();
+
+        try {
+            new URL(link);
+        } catch {
+            throw new Error("Link inválido");
+        }
 
         await carregarAds();
 
@@ -328,8 +356,14 @@ async function criarAd() {
     }
 }
 
+let loadingAds = false;
+
 // ================= ADS =================
 async function carregarAds() {
+
+    if (loadingAds) return;
+    loadingAds = true;
+
     try {
         const res = await fetch(`${API}?action=myAds`, {
             headers: {
@@ -344,6 +378,8 @@ async function carregarAds() {
 
     } catch (err) {
         alert(err.message);
+    } finally {
+        loadingAds = false;
     }
 }
 
