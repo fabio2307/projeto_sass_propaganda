@@ -149,6 +149,23 @@ async function login() {
     }
 }
 
+// ================= CALCULAR IDADE =================
+function calcularIdade(data) {
+    if (!data) return "";
+
+    const hoje = new Date();
+    const nascimento = new Date(data);
+
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+        idade--;
+    }
+
+    return idade;
+}
+
 // ================= SALDO =================
 async function carregarSaldo() {
     try {
@@ -386,7 +403,12 @@ async function carregarAds() {
 // ================= PAGAMENTO =================
 async function pagar() {
     try {
-        const amount = Number(document.getElementById("valor").value);
+        const raw = document.getElementById("valor").value
+            .replace("R$ ", "")
+            .replace(/\./g, "")
+            .replace(",", ".");
+
+        const amount = Number(raw);
 
         if (!amount || amount <= 0) {
             throw new Error("Valor inválido");
@@ -409,6 +431,18 @@ async function pagar() {
     } catch (err) {
         alert(err.message);
     }
+}
+
+// ================= FORMATAÇÃO DE MOEDA =================
+function formatarMoeda(input) {
+    let value = input.value.replace(/\D/g, "");
+
+    value = (value / 100).toFixed(2) + "";
+    value = value.replace(".", ",");
+
+    value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    input.value = "R$ " + value;
 }
 
 // ================= INICIALIZAÇÃO =================
@@ -485,9 +519,25 @@ async function toggleAd(adId, status) {
 // ================= DOM CONTENT LOADED =================
 document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("btnLogin");
+    const birthInput = document.getElementById("registerBirth");
+    const ageInput = document.getElementById("registerAge");
+    const valorInput = document.getElementById("valor");
 
+    // 🔥 eventos
     if (btn) {
         btn.addEventListener("click", login);
+    }
+
+    // 🔥 calcula idade ao escolher data de nascimento
+    if (birthInput && ageInput) {
+        birthInput.addEventListener("change", () => {
+            ageInput.value = calcularIdade(birthInput.value);
+        });
+    }
+
+    // 🔥 formata campo de valor
+    if (valorInput) {
+        valorInput.addEventListener("input", () => formatarMoeda(valorInput));
     }
 
     init(); // 🔥 chama aqui dentro

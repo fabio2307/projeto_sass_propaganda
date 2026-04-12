@@ -24,7 +24,8 @@
         <h2>Cadastro</h2>
 
         <input id="registerName" placeholder="Nome">
-        <input id="registerAge" type="number" placeholder="Idade">
+        <input id="registerBirth" type="date">
+        <input id="registerAge" type="number" placeholder="Idade" readonly>
         <input id="registerEmail" placeholder="Email">
         <input id="registerPassword" type="password" placeholder="Senha">
 
@@ -49,7 +50,7 @@
         <div class="saldo-box">
             <h3>💰 Saldo: R$ <span id="saldo">0</span></h3>
 
-            <input type="number" id="valor" placeholder="Valor para adicionar">
+            <input type="text" id="valor" placeholder="R$ 0,00">
             <button onclick="pagar()">Adicionar saldo</button>
         </div>
 
