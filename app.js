@@ -70,7 +70,7 @@ async function register() {
             },
             body: JSON.stringify({
                 name: document.getElementById("registerName").value,
-                birthDate: document.getElementById("registerBirth").value,
+                birthdate: document.getElementById("registerBirth").value, // ✅ corrigido
                 email: document.getElementById("registerEmail").value,
                 password: document.getElementById("registerPassword").value
             })
@@ -79,8 +79,11 @@ async function register() {
         const data = await safeJson(res);
 
         alert("Conta criada com sucesso!");
-        showLogin();
+
+        // 🧹 limpa tudo automaticamente
         limparCamposCadastro();
+
+        showLogin();
 
     } catch (err) {
         console.error(err);
@@ -90,10 +93,7 @@ async function register() {
 
 // ================= LIMPAR CAMPOS DE CADASTRO =================
 function limparCamposCadastro() {
-    document.getElementById("name").value = "";
-    document.getElementById("email").value = "";
-    document.getElementById("password").value = "";
-    document.getElementById("birthdate").value = "";
+    document.getElementById("formRegister").reset();
 }
 
 // ================= LOGIN =================

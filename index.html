@@ -23,11 +23,21 @@
     <div class="center-box hidden" id="registerBox">
         <h2>Cadastro</h2>
 
-        <input id="registerName" placeholder="Nome">
-        <input id="registerBirth" type="date">
-        <input id="registerAge" type="number" placeholder="Idade" readonly>
-        <input id="registerEmail" placeholder="Email">
-        <input id="registerPassword" type="password" placeholder="Senha">
+        <form id="formRegister" onsubmit="event.preventDefault(); register();">
+
+            <input type="text" id="registerName" placeholder="Nome" required />
+
+            <input type="date" id="registerBirth" required />
+
+            <input type="email" id="registerEmail" placeholder="Email" required />
+
+            <input type="password" id="registerPassword" placeholder="Senha" required />
+
+            <button type="submit">
+                Cadastrar
+            </button>
+
+        </form>
 
         <button onclick="register()">Cadastrar</button>
         <p onclick="showLogin()" class="link">Já tenho conta</p>
