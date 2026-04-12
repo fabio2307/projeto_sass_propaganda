@@ -411,6 +411,41 @@ async function pagar() {
     }
 }
 
+// ================= INICIALIZAÇÃO =================
+async function init() {
+    const token = getToken();
+
+    // 🔒 se não estiver logado, não faz nada
+    if (!token) {
+        console.log("❌ Usuário não logado");
+        return;
+    }
+
+    console.log("✅ Usuário autenticado");
+
+    // esconder login (se existir)
+    const loginBox = document.getElementById("loginBox");
+    if (loginBox) loginBox.classList.add("hidden");
+
+    // mostrar dashboard (se existir)
+    const dashboard = document.getElementById("dashboard");
+    if (dashboard) dashboard.classList.remove("hidden");
+
+    try {
+        await carregarSaldo();
+        await carregarAds();
+    } catch (err) {
+        console.error("Erro ao iniciar:", err);
+    }
+
+    // 🔥 retorno de pagamento
+    if (window.location.search.includes("success")) {
+        alert("Pagamento aprovado!");
+        await carregarSaldo();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
 // ================= TOGGLE AD =================
 async function toggleAd(adId, status) {
     try {
@@ -454,10 +489,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btn) {
         btn.addEventListener("click", login);
     }
+
+    init(); // 🔥 chama aqui dentro
 });
 
 
 // ================= EXPORT =================
+window.init = init;
 window.register = register;
 window.pagar = pagar;
 window.logout = logout;
