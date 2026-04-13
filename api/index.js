@@ -4,6 +4,8 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import { Resend } from 'resend';
 
+const baseUrl = process.env.BASE_URL || "https://projeto-sass-propaganda.vercel.app";
+
 // ✅ Resend seguro
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -146,11 +148,11 @@ export default async function handler(req, res) {
                 to: email,
                 subject: 'Verifique sua conta',
                 html: `
-            <h2>Confirme seu cadastro</h2>
-            <a href="https://seu-site.vercel.app/api?action=verify&token=${verifyToken}">
-                Verificar conta
-            </a>
-        `
+                   <h2>Confirme seu cadastro</h2>
+                   <a href="${baseUrl}/api?action=verify&token=${verifyToken}">
+                     Verificar conta
+                   </a>
+                `
             });
 
             return res.json({ ok: true });
