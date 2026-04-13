@@ -78,7 +78,7 @@ async function register() {
 
         const data = await safeJson(res);
 
-        alert("Conta criada com sucesso!");
+        alert("Conta criada! Verifique seu email antes de entrar 📩");
 
         // 🧹 limpa tudo automaticamente
         limparCamposCadastro();

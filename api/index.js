@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
+import { Resend } from 'resend';
+
+// ✅ Resend seguro
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ✅ Stripe seguro
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -124,7 +128,9 @@ export default async function handler(req, res) {
                     password: hash,
                     token,
                     balance: 0,
-                    plan: "free"
+                    plan: "free",
+                    verify_token: verifyToken,
+                    verified: false
                 }]);
 
             if (error) {
@@ -132,7 +138,44 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: error.message });
             }
 
+            await resend.emails.send({
+                from: 'no-reply@seusite.com',
+                to: email,
+                subject: 'Verifique sua conta',
+                html: `
+                <h2>Confirme seu cadastro</h2>
+                <p>Clique no link abaixo:</p>
+                   <a href="https://seu-site.vercel.app/api?action=verify&token=${verifyToken}">
+                Verificar conta
+                </a>    `
+            });
+
             return res.json({ ok: true });
+        }
+
+        // ================= VERIFY =================
+        if (action === "verify") {
+            const { token } = req.query;
+
+            const { data: user } = await supabase
+                .from("users")
+                .select("*")
+                .eq("verify_token", token)
+                .single();
+
+            if (!user) {
+                return res.status(400).send("Token inválido");
+            }
+
+            await supabase
+                .from("users")
+                .update({
+                    verified: true,
+                    verify_token: null
+                })
+                .eq("id", user.id);
+
+            return res.send("Conta verificada com sucesso!");
         }
 
         // ================= LOGIN =================
@@ -154,6 +197,12 @@ export default async function handler(req, res) {
 
             if (!match) {
                 return res.status(401).json({ error: "Login inválido" });
+            }
+
+            if (!user.verified) {
+                return res.status(401).json({
+                    error: "Verifique seu email antes de acessar"
+                });
             }
 
             return res.json({
