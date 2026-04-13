@@ -217,7 +217,85 @@ export default async function handler(req, res) {
                 })
                 .eq("id", user.id);
 
-            return res.send("Conta verificada com sucesso!");
+            return res.send(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Conta verificada</title>
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+    }
+
+    .card {
+        background: #020617;
+        padding: 40px;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid #1e293b;
+        width: 90%;
+        max-width: 400px;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    p {
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    .btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 20px;
+        background: #22c55e;
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: bold;
+    }
+
+    .icon {
+        font-size: 50px;
+        margin-bottom: 15px;
+    }
+</style>
+</head>
+
+<body>
+
+<div class="card">
+    <div class="icon">✅</div>
+    <h1>Conta verificada!</h1>
+
+    <p>
+        Sua conta foi confirmada com sucesso.<br>
+        Agora você já pode acessar a plataforma.
+    </p>
+
+    <a href="/" class="btn">Ir para o login</a>
+</div>
+
+<script>
+    setTimeout(() => {
+        window.location.href = "/";
+    }, 4000);
+</script>
+
+</body>
+</html>
+`);
         }
 
         // ================= LOGIN =================
