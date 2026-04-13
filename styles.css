@@ -102,6 +102,31 @@ body {
   justify-content: space-between;
 }
 
+/* FORM DO CADASTRO */
+#formRegister {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* INPUTS DO CADASTRO */
+#formRegister input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* BOTÃO DO CADASTRO */
+#formRegister button {
+  width: 100%;
+}
+
+/* IDADE (visual mais suave) */
+#registerAge {
+  background: #020617;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 input {
   padding: 12px;
   border-radius: 8px;

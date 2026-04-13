@@ -19,27 +19,25 @@
         <button id="btnLogin">Entrar</button>
         <p onclick="showRegister()" class="link">Criar conta</p>
     </div>
-
     <div class="center-box hidden" id="registerBox">
         <h2>Cadastro</h2>
 
         <form id="formRegister" onsubmit="event.preventDefault(); register();">
 
-            <input type="text" id="registerName" placeholder="Nome" required />
+            <input id="registerName" type="text" placeholder="Nome" required>
 
-            <input type="date" id="registerBirth" required />
+            <input id="registerBirth" type="date" required onchange="calcularIdade()">
 
-            <input type="email" id="registerEmail" placeholder="Email" required />
+            <input id="registerAge" type="number" placeholder="Idade" readonly>
 
-            <input type="password" id="registerPassword" placeholder="Senha" required />
+            <input id="registerEmail" type="email" placeholder="Email" required>
 
-            <button type="submit">
-                Cadastrar
-            </button>
+            <input id="registerPassword" type="password" placeholder="Senha" required>
+
+            <button type="submit">Cadastrar</button>
 
         </form>
 
-        <button onclick="register()">Cadastrar</button>
         <p onclick="showLogin()" class="link">Já tenho conta</p>
     </div>
 
