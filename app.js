@@ -203,9 +203,17 @@ async function login() {
         alert("Login realizado!");
 
     } catch (err) {
-        // 🔥 AQUI ENTRA O TRATAMENTO
+
         if (err.message.includes("Verifique seu email")) {
+
             alert("📩 Verifique seu email antes de fazer login");
+
+            // 🔥 MOSTRA O BOTÃO
+            const resendBox = document.getElementById("resendBox");
+            if (resendBox) {
+                resendBox.classList.remove("hidden");
+            }
+
         } else {
             alert("Erro no login: " + err.message);
         }
