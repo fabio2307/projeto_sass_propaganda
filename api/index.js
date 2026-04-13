@@ -97,7 +97,7 @@ export default async function handler(req, res) {
                 .maybeSingle();
 
             return data || null;
-        }        
+        }
 
         // ================= REGISTER =================
         if (action === "register") {
@@ -323,11 +323,74 @@ export default async function handler(req, res) {
                 return res.status(401).json({
                     error: "Verifique seu email antes de acessar"
                 });
-            }            
+            }
             return res.json({
                 token: user.token,
                 user: { id: user.id } // 🔥 importante pro frontend
             });
+        }
+
+        // ================= REENVIAR VERIFICAÇÃO (API) =================
+        if (action === "resend") {
+
+            let body = {};
+
+            try {
+                body = typeof req.body === "string"
+                    ? JSON.parse(req.body)
+                    : req.body;
+            } catch {
+                return res.status(400).json({ error: "JSON inválido" });
+            }
+
+            const { email } = body;
+
+            if (!email) {
+                return res.status(400).json({
+                    error: "Email é obrigatório"
+                });
+            }
+
+            // 🔍 busca usuário
+            const { data: user } = await supabase
+                .from("users")
+                .select("*")
+                .eq("email", email)
+                .maybeSingle();
+
+            // 🔒 não revela se o email existe
+            if (!user) {
+                return res.json({ ok: true });
+            }
+
+            // ✅ já verificado → não faz nada
+            if (user.verified) {
+                return res.json({ ok: true });
+            }
+
+            // 🔥 gera novo token
+            const verifyToken = crypto.randomUUID();
+
+            await supabase
+                .from("users")
+                .update({ verify_token: verifyToken })
+                .eq("id", user.id);
+
+            // 📧 envia email novamente
+            await resend.emails.send({
+                from: 'onboarding@resend.dev',
+                to: email,
+                subject: 'Reenvio de verificação',
+                html: `
+            <h2>Confirme seu cadastro</h2>
+            <p>Clique abaixo para verificar sua conta:</p>
+            <a href="${baseUrl}/api?action=verify&token=${verifyToken}">
+                Verificar conta
+            </a>
+        `
+            });
+
+            return res.json({ ok: true });
         }
 
         // ================= GET USER =================
