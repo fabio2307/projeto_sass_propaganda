@@ -119,6 +119,9 @@ export default async function handler(req, res) {
             const hash = await bcrypt.hash(password, 10);
             const token = crypto.randomUUID();
 
+            // 🔥 FALTAVA ISSO
+            const verifyToken = crypto.randomUUID();
+
             const { error } = await supabase
                 .from("users")
                 .insert([{
@@ -139,15 +142,15 @@ export default async function handler(req, res) {
             }
 
             await resend.emails.send({
-                from: 'no-reply@seusite.com',
+                from: 'onboarding@resend.dev', // 🔥 use esse pra teste
                 to: email,
                 subject: 'Verifique sua conta',
                 html: `
-                <h2>Confirme seu cadastro</h2>
-                <p>Clique no link abaixo:</p>
-                   <a href="https://seu-site.vercel.app/api?action=verify&token=${verifyToken}">
+            <h2>Confirme seu cadastro</h2>
+            <a href="https://seu-site.vercel.app/api?action=verify&token=${verifyToken}">
                 Verificar conta
-                </a>    `
+            </a>
+        `
             });
 
             return res.json({ ok: true });
