@@ -97,7 +97,7 @@ export default async function handler(req, res) {
                 .maybeSingle();
 
             return data || null;
-        }
+        }        
 
         // ================= REGISTER =================
         if (action === "register") {
@@ -323,6 +323,17 @@ export default async function handler(req, res) {
                 return res.status(401).json({
                     error: "Verifique seu email antes de acessar"
                 });
+            }
+
+            if (err.message.includes("Verifique seu email")) {
+
+                alert("📩 Verifique seu email antes de fazer login");
+
+                // 🔥 MOSTRA O BOTÃO
+                document.getElementById("resendBox").classList.remove("hidden");
+
+            } else {
+                alert("Erro no login: " + err.message);
             }
 
             return res.json({

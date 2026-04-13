@@ -88,6 +88,62 @@ async function register() {
     }
 }
 
+// ================= REENVIAR VERIFICAÇÃO =================
+let countdown = 0;
+
+async function resendVerification() {
+    const email = document.getElementById("loginEmail").value;
+    const btn = document.getElementById("resendBtn");
+
+    if (!email) {
+        alert("Digite seu email primeiro");
+        return;
+    }
+
+    // 🔥 bloqueia se já estiver contando
+    if (countdown > 0) return;
+
+    try {
+        const res = await fetch(`${API}?action=resend`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await safeJson(res);
+
+        alert("📩 Email de verificação reenviado!");
+
+        // 🔥 inicia contador de 60s
+        startCountdown(btn);
+
+    } catch (err) {
+        alert("Erro: " + err.message);
+    }
+}
+
+// ================= CONTADOR DE REENVIO =================
+function startCountdown(btn) {
+    countdown = 60;
+
+    btn.classList.add("disabled");
+
+    const interval = setInterval(() => {
+        countdown--;
+
+        btn.innerText = `Reenviar (${countdown}s)`;
+
+        if (countdown <= 0) {
+            clearInterval(interval);
+
+            btn.innerText = "Reenviar verificação";
+            btn.classList.remove("disabled");
+        }
+    }, 1000);
+}
+
 // ================= LIMPAR CAMPOS DE CADASTRO =================
 function limparCamposCadastro() {
     document.getElementById("formRegister").reset();

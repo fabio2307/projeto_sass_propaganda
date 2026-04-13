@@ -17,6 +17,12 @@
         <input id="loginPassword" type="password" placeholder="Senha">
 
         <button id="btnLogin">Entrar</button>
+
+        <p id="resendBox" class="resend hidden">
+            Não recebeu o email?
+            <span id="resendBtn" onclick="resendVerification()">Reenviar verificação</span>
+        </p>
+
         <p onclick="showRegister()" class="link">Criar conta</p>
     </div>
     <div class="center-box hidden" id="registerBox">
