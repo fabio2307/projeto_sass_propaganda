@@ -92,35 +92,32 @@ async function register() {
 let countdown = 0;
 
 async function resendVerification() {
-    const email = document.getElementById("loginEmail").value;
-    const btn = document.getElementById("resendBtn");
-
-    if (!email) {
-        alert("Digite seu email primeiro");
-        return;
-    }
-
-    // 🔥 bloqueia se já estiver contando
-    if (countdown > 0) return;
-
     try {
+        const email = document.getElementById("loginEmail").value;
+
+        if (!email) {
+            alert("Digite seu email para reenviar a verificação");
+            return;
+        }
+
         const res = await fetch(`${API}?action=resend`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email }) // ✅ AQUI ESTÁ A CORREÇÃO
         });
 
-        const data = await safeJson(res);
+        const data = await res.json();
 
-        alert("📩 Email de verificação reenviado!");
+        if (!res.ok) {
+            throw new Error(data.error || "Erro ao reenviar");
+        }
 
-        // 🔥 inicia contador de 60s
-        startCountdown(btn);
+        alert("Email de verificação reenviado!");
 
     } catch (err) {
-        alert("Erro: " + err.message);
+        alert(err.message);
     }
 }
 
@@ -234,6 +231,70 @@ async function login() {
             btn.innerText = "Entrar";
         }
     }
+}
+
+
+// ================= REENVIAR VERIFICAÇÃO (API) =================
+if (action === "resend") {
+
+    let body = {};
+
+    try {
+        body = typeof req.body === "string"
+            ? JSON.parse(req.body)
+            : req.body;
+    } catch {
+        return res.status(400).json({ error: "JSON inválido" });
+    }
+
+    const { email } = body;
+
+    if (!email) {
+        return res.status(400).json({
+            error: "Email é obrigatório"
+        });
+    }
+
+    // 🔍 busca usuário
+    const { data: user } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .maybeSingle();
+
+    // 🔒 não revela se o email existe
+    if (!user) {
+        return res.json({ ok: true });
+    }
+
+    // ✅ já verificado → não faz nada
+    if (user.verified) {
+        return res.json({ ok: true });
+    }
+
+    // 🔥 gera novo token
+    const verifyToken = crypto.randomUUID();
+
+    await supabase
+        .from("users")
+        .update({ verify_token: verifyToken })
+        .eq("id", user.id);
+
+    // 📧 envia email novamente
+    await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: email,
+        subject: 'Reenvio de verificação',
+        html: `
+            <h2>Confirme seu cadastro</h2>
+            <p>Clique abaixo para verificar sua conta:</p>
+            <a href="${baseUrl}/api?action=verify&token=${verifyToken}">
+                Verificar conta
+            </a>
+        `
+    });
+
+    return res.json({ ok: true });
 }
 
 // ================= CALCULAR IDADE =================
