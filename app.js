@@ -14,14 +14,11 @@ async function safeJson(res) {
     }
 
     // 🔥 TRATAMENTO DE TOKEN EXPIRADO
-    if (res.status === 401 || data.error === "Token inválido") {
+    if (data.error === "Token inválido") {
         localStorage.clear();
-
         alert("Sessão expirada. Faça login novamente.");
-
         window.location.href = "/index.html";
-
-        return; // importante pra parar execução
+        return;
     }
 
     if (!res.ok) {
@@ -131,6 +128,10 @@ async function login() {
 
         const data = await safeJson(res);
 
+        if (!data || !data.token) {
+            throw new Error("Resposta inválida do servidor");
+        }
+
         // salvar sessão
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
@@ -146,8 +147,12 @@ async function login() {
         alert("Login realizado!");
 
     } catch (err) {
-        console.error(err);
-        alert("Erro no login: " + err.message);
+        // 🔥 AQUI ENTRA O TRATAMENTO
+        if (err.message.includes("Verifique seu email")) {
+            alert("📩 Verifique seu email antes de fazer login");
+        } else {
+            alert("Erro no login: " + err.message);
+        }
 
     } finally {
         // 🔓 SEMPRE libera botão (mesmo com erro)
