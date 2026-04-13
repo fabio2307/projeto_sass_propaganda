@@ -382,11 +382,47 @@ export default async function handler(req, res) {
                 to: email,
                 subject: 'Reenvio de verificação',
                 html: `
-            <h2>Confirme seu cadastro</h2>
-            <p>Clique abaixo para verificar sua conta:</p>
-            <a href="${baseUrl}/api?action=verify&token=${verifyToken}">
-                Verificar conta
-            </a>
+            <div style="font-family: Arial, sans-serif; background:#0f172a; padding:40px; text-align:center; color:#e2e8f0;">
+    
+    <div style="max-width:500px; margin:auto; background:#020617; padding:30px; border-radius:12px; border:1px solid #1e293b;">
+        
+        <h2 style="margin-bottom:10px;">🚀 Confirme seu cadastro</h2>
+        
+        <p style="color:#94a3b8; font-size:14px;">
+            Para ativar sua conta, clique no botão abaixo:
+        </p>
+
+        <a href="${baseUrl}/api?action=verify&token=${verifyToken}"
+           style="
+                display:inline-block;
+                margin-top:20px;
+                padding:12px 25px;
+                background:#3b82f6;
+                color:#fff;
+                text-decoration:none;
+                border-radius:8px;
+                font-weight:bold;
+           ">
+            ✅ Verificar conta
+        </a>
+
+        <p style="margin-top:25px; font-size:12px; color:#64748b;">
+            Se o botão não funcionar, copie e cole este link no navegador:
+        </p>
+
+        <p style="word-break:break-all; font-size:12px; color:#38bdf8;">
+            ${baseUrl}/api?action=verify&token=${verifyToken}
+        </p>
+
+        <hr style="margin:25px 0; border-color:#1e293b;">
+
+        <p style="font-size:11px; color:#475569;">
+            Se você não criou essa conta, ignore este email.
+        </p>
+
+    </div>
+
+</div>
         `
             });
 
