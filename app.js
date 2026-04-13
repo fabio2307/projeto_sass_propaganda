@@ -22,7 +22,7 @@ async function safeJson(res) {
     }
 
     if (!res.ok) {
-        throw new Error(data.error || "Erro desconhecido");
+        return data; // 🔥 deixa o login tratar o erro
     }
 
     return data;
@@ -184,8 +184,17 @@ async function login() {
 
         const data = await safeJson(res);
 
-        if (!data || !data.token) {
-            throw new Error("Resposta inválida do servidor");
+        // 🚫 se safeJson já redirecionou
+        if (!data) return;
+
+        // 🔥 trata erro da API corretamente
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        // 🔥 valida token
+        if (!data.token) {
+            throw new Error("Login inválido");
         }
 
         // salvar sessão
