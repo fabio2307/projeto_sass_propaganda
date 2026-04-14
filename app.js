@@ -558,9 +558,11 @@ if (bidInput) {
 // ================= PARSE DE MOEDA =================
 function parseMoney(value) {
     return Number(
-        value.replace("R$ ", "")
+        String(value)
+            .replace("R$", "")
             .replace(/\./g, "")
             .replace(",", ".")
+            .trim()
     );
 }
 

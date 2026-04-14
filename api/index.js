@@ -478,8 +478,10 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid } = body;
 
-            // 🔥 força número
-            const bidNumber = Number(bid);
+            // 🔥 normaliza bid (resolve 99% dos erros 400)
+            const bidNumber = Number(
+                String(bid).replace(/[^\d.-]/g, "").replace(",", ".")
+            );
 
             // 🔥 validação robusta
             if (!title || !link || isNaN(bidNumber) || bidNumber <= 0) {
@@ -489,23 +491,35 @@ export default async function handler(req, res) {
                 });
             }
 
-            // 🔥 sanitização segura (NÃO quebrar URL)
-            const safeTitle = sanitize(title);
-            const safeDescription = sanitize(description);
-            const safeLink = link;
+            // 🔥 sanitização SEGURA (sem quebrar URL)
+            function sanitizeText(text) {
+                return String(text)
+                    .trim()
+                    .replace(/[<>]/g, "") // remove tags básicas
+                    .slice(0, 255); // evita overflow
+            }
 
-            // 🔥 valida saldo (CORRIGIDO)
+            const safeTitle = sanitizeText(title);
+            const safeDescription = sanitizeText(description);
+
+            // 🔥 valida URL corretamente
+            let safeLink;
+            try {
+                const url = new URL(link);
+                safeLink = url.href;
+            } catch {
+                return res.status(400).json({ error: "Link inválido" });
+            }
+
+            // 🔥 valida saldo
             if ((user.balance || 0) < bidNumber) {
                 return res.status(400).json({
                     error: "Saldo insuficiente para criar anúncio"
                 });
             }
 
-            // 🔥 DEBUG (opcional, ajuda MUITO)
             console.log("CREATE AD:", {
                 user: user.id,
-                title: safeTitle,
-                link: safeLink,
                 bid: bidNumber
             });
 
@@ -516,7 +530,7 @@ export default async function handler(req, res) {
                     title: safeTitle,
                     description: safeDescription,
                     link: safeLink,
-                    bid: bidNumber, // ✅ corrigido
+                    bid: bidNumber,
                     clicks: 0,
                     views: 0,
                     status: "active"
