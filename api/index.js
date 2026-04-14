@@ -478,21 +478,36 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid } = body;
 
-            if (!title || !link || !bid || bid <= 0) {
-                return res.status(400).json({ error: "Dados inválidos" });
+            // 🔥 força número
+            const bidNumber = Number(bid);
+
+            // 🔥 validação robusta
+            if (!title || !link || isNaN(bidNumber) || bidNumber <= 0) {
+                return res.status(400).json({
+                    error: "Dados inválidos",
+                    debug: { title, link, bid }
+                });
             }
 
-            // 🔥 sanitização
+            // 🔥 sanitização segura (NÃO quebrar URL)
             const safeTitle = sanitize(title);
             const safeDescription = sanitize(description);
-            const safeLink = sanitize(link);
+            const safeLink = link;
 
-            // 🔥 valida saldo
-            if ((user.balance || 0) < bid) {
+            // 🔥 valida saldo (CORRIGIDO)
+            if ((user.balance || 0) < bidNumber) {
                 return res.status(400).json({
                     error: "Saldo insuficiente para criar anúncio"
                 });
             }
+
+            // 🔥 DEBUG (opcional, ajuda MUITO)
+            console.log("CREATE AD:", {
+                user: user.id,
+                title: safeTitle,
+                link: safeLink,
+                bid: bidNumber
+            });
 
             const { error } = await supabase
                 .from("ads")
@@ -501,14 +516,18 @@ export default async function handler(req, res) {
                     title: safeTitle,
                     description: safeDescription,
                     link: safeLink,
-                    bid,
+                    bid: bidNumber, // ✅ corrigido
                     clicks: 0,
                     views: 0,
                     status: "active"
                 }]);
 
             if (error) {
-                return res.status(400).json({ error: "Erro ao criar anúncio" });
+                console.error("SUPABASE ERROR:", error);
+                return res.status(400).json({
+                    error: "Erro ao criar anúncio",
+                    details: error.message
+                });
             }
 
             return res.json({ success: true });
