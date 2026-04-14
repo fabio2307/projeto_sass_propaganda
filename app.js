@@ -421,6 +421,8 @@ async function criarAd() {
         const link = document.getElementById("link").value;
         const bid = parseMoney(document.getElementById("bid").value);
 
+        console.log("ENVIANDO:", { title, description, link, bid }); // 🔥 DEBUG
+
         if (!title || !link || isNaN(bid) || bid <= 0) {
             throw new Error("Preencha os campos corretamente");
         }
@@ -433,7 +435,6 @@ async function criarAd() {
             throw new Error("Descrição muito curta");
         }
 
-        // ✅ valida link antes
         try {
             new URL(link);
         } catch {
@@ -449,7 +450,13 @@ async function criarAd() {
             body: JSON.stringify({ title, description, link, bid })
         });
 
-        await safeJson(res);
+        const data = await res.json();
+
+        console.log("RESPOSTA BACK:", data); // 🔥 ESSENCIAL
+
+        if (!res.ok) {
+            throw new Error(data.error || "Erro ao criar anúncio");
+        }
 
         alert("Anúncio criado com sucesso 🚀");
 
@@ -462,6 +469,7 @@ async function criarAd() {
         await carregarAds();
 
     } catch (err) {
+        console.error("ERRO:", err);
         alert(err.message);
     }
 }
