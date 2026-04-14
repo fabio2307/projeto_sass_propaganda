@@ -41,13 +41,29 @@ export default async function handler(req, res) {
 
         const supabase = createClient(
             process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
+        const sessionId = session.id;
         const userId = session.metadata.user_id;
-        const amount = Number(session.metadata.amount);
 
-        if (!userId || !amount) return;
+        const amount = session.amount_total / 100;
+
+        if (!userId || !amount) {
+            return res.status(400).json({ error: "Dados inválidos" });
+        }
+
+        // 🔥 EVITA DUPLICIDADE
+        const { data: existing } = await supabase
+            .from("transactions")
+            .select("id")
+            .eq("stripe_session", sessionId)
+            .maybeSingle();
+
+        if (existing) {
+            console.log("Pagamento já processado");
+            return res.json({ received: true });
+        }
 
         const { data: user } = await supabase
             .from("users")
@@ -55,12 +71,14 @@ export default async function handler(req, res) {
             .eq("id", userId)
             .single();
 
-        if (!user) return;
+        if (!user) {
+            return res.status(404).json({ error: "Usuário não encontrado" });
+        }
 
         await supabase
             .from("users")
             .update({
-                balance: user.balance + amount
+                balance: (user.balance || 0) + amount
             })
             .eq("id", userId);
 
@@ -68,7 +86,8 @@ export default async function handler(req, res) {
             user_id: userId,
             amount: amount,
             type: "deposit",
-            status: "completed"
+            status: "completed",
+            stripe_session: sessionId
         });
     }
 

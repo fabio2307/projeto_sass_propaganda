@@ -14,7 +14,11 @@ const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY)
     : null;
 
-// ✅ Rate limit
+// 🔥 sanitização básica contra XSS
+function sanitize(str) {
+    return String(str).replace(/[<>]/g, "");
+}
+
 const clicks = new Map();
 
 function checkRateLimit(ip) {
@@ -25,11 +29,21 @@ function checkRateLimit(ip) {
     }
 
     const history = clicks.get(ip);
+
+    // 🔥 remove registros antigos (30s)
     const filtered = history.filter(t => now - t < 30000);
 
+    // 🔥 adiciona novo clique
     filtered.push(now);
+
+    // 🔥 limita tamanho (evita leak de memória)
+    if (filtered.length > 20) {
+        filtered.shift();
+    }
+
     clicks.set(ip, filtered);
 
+    // 🔥 limite: 5 cliques em 30s
     return filtered.length <= 5;
 }
 
@@ -324,9 +338,18 @@ export default async function handler(req, res) {
                     error: "Verifique seu email antes de acessar"
                 });
             }
+
+            // 🔥 NOVO: gera novo token (sem quebrar o resto)
+            const newToken = crypto.randomUUID();
+
+            await supabase
+                .from("users")
+                .update({ token: newToken })
+                .eq("id", user.id);
+
             return res.json({
-                token: user.token,
-                user: { id: user.id } // 🔥 importante pro frontend
+                token: newToken, // 🔥 agora retorna o novo token
+                user: { id: user.id } // mantém compatibilidade com seu frontend
             });
         }
 
@@ -459,13 +482,25 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
+            // 🔥 sanitização
+            const safeTitle = sanitize(title);
+            const safeDescription = sanitize(description);
+            const safeLink = sanitize(link);
+
+            // 🔥 valida saldo
+            if ((user.balance || 0) < bid) {
+                return res.status(400).json({
+                    error: "Saldo insuficiente para criar anúncio"
+                });
+            }
+
             const { error } = await supabase
                 .from("ads")
                 .insert([{
                     user_id: user.id,
-                    title,
-                    description,
-                    link,
+                    title: safeTitle,
+                    description: safeDescription,
+                    link: safeLink,
                     bid,
                     clicks: 0,
                     views: 0,
@@ -537,18 +572,17 @@ export default async function handler(req, res) {
                 req.headers["x-forwarded-for"]?.split(",")[0] ||
                 req.socket.remoteAddress;
 
-            // ⏱️ bloqueia clique repetido (últimos 30 segundos)
-            const { data: recentClick } = await supabase
-                .from("ad_clicks")
-                .select("*")
-                .eq("ad_id", adId)
-                .eq("ip", ip)
-                .gte("created_at", new Date(Date.now() - 30000).toISOString())
-                .maybeSingle();
+            // 🔥 RATE LIMIT REAL (por IP + anúncio)
+            const allowed = await checkRateLimitDB(supabase, ip, adId);
 
-            if (recentClick) {
+            if (!allowed) {
                 return res.json({ blocked: true });
             }
+
+            // 🔥 registra tentativa no log de rate limit
+            await supabase
+                .from("click_logs")
+                .insert([{ ip, ad_id: adId }]);
 
             // 🔥 registra clique
             await supabase
@@ -642,6 +676,35 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
+        //
+        async function checkRateLimitDB(supabase, ip, adId) {
+            try {
+                const { data, error } = await supabase
+                    .from("click_logs")
+                    .select("id")
+                    .eq("ip", ip)
+                    .eq("ad_id", adId) // 🔥 importante (evita travar todos os anúncios)
+                    .gte(
+                        "created_at",
+                        new Date(Date.now() - 30000).toISOString()
+                    );
+
+                if (error) {
+                    console.error("Erro rate limit:", error);
+                    return true; // 🔥 não bloqueia em caso de erro
+                }
+
+                const total = data ? data.length : 0;
+
+                // 🔥 limite: 5 cliques em 30s por anúncio + IP
+                return total < 5;
+
+            } catch (err) {
+                console.error("Erro inesperado rate limit:", err);
+                return true; // 🔥 fallback seguro
+            }
+        }
+
         // ================= CHECKOUT =================
         if (action === "createCheckout") {
 
@@ -666,8 +729,17 @@ export default async function handler(req, res) {
                 const baseUrl = req.headers.origin || "https://projeto-sass-propaganda.vercel.app";
 
                 const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card", "boleto"], // ✅ aqui está o ajuste
+                    payment_method_types: ["card", "boleto"],
                     mode: "payment",
+
+                    // 🔥 IMPORTANTE PRO WEBHOOK
+                    client_reference_id: user.id, // extra para rastreio
+
+                    metadata: {
+                        user_id: user.id,
+                        amount: amount.toString()
+                    },
+
                     line_items: [{
                         price_data: {
                             currency: "brl",
@@ -678,6 +750,7 @@ export default async function handler(req, res) {
                         },
                         quantity: 1
                     }],
+
                     success_url: `${baseUrl}/?success=true`,
                     cancel_url: `${baseUrl}/?cancel=true`
                 });
