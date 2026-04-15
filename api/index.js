@@ -8,18 +8,21 @@ import { Resend } from 'resend';
 const baseUrl = process.env.BASE_URL || "https://projeto-sass-propaganda.vercel.app";
 
 // ✅ Resend seguro
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+    ? new Resend(process.env.RESEND_API_KEY)
+    : null;
 
 // ✅ Stripe seguro
 const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY)
     : null;
 
-// ✅ Supabase seguro no backend
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getSupabase() {
+    return createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+}
 
 // 🔥 sanitização básica contra XSS
 function sanitize(str) {
@@ -103,6 +106,7 @@ export default async function handler(req, res) {
 
         // ✅ IP corrigido (Vercel manda lista)
 
+        const supabase = getSupabase();
         const { action } = req.query;
 
         // ✅ IP corrigido
@@ -189,6 +193,10 @@ export default async function handler(req, res) {
             if (error) {
                 console.error("ERRO SUPABASE:", error);
                 return res.status(400).json({ error: error.message });
+            }
+
+            if (!resend) {
+                return res.status(500).json({ error: "Resend não configurado" });
             }
 
             await resend.emails.send({
@@ -438,6 +446,10 @@ export default async function handler(req, res) {
                 .eq("id", user.id);
 
             // 📧 envia email novamente
+            if (!resend) {
+                return res.status(500).json({ error: "Resend não configurado" });
+            }
+
             await resend.emails.send({
                 from: 'onboarding@resend.dev',
                 to: email,

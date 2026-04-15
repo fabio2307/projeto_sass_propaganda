@@ -6,6 +6,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY)
     : null;
 
+function getSupabase() {
+    return createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+}
+
 export const config = {
     api: { bodyParser: false },
 };
@@ -46,10 +53,7 @@ export default async function handler(req, res) {
 
         const session = event.data.object;
 
-        const supabase = createClient(
-            process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY
-        );
+        const supabase = getSupabase();
 
         const sessionId = session.id;
         const userId = session.metadata.user_id;
