@@ -297,3 +297,50 @@ button {
   opacity: 0.5;
   pointer-events: none;
 }
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.input-group label {
+    font-size: 13px;
+    color: #888;
+}
+
+.money-input {
+    display: flex;
+    align-items: center;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px;
+    transition: 0.2s;
+}
+
+.money-input:focus-within {
+    border-color: #00ff88;
+    box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+}
+
+.money-input span {
+    color: #00ff88;
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+.money-input input {
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #fff;
+    width: 100%;
+    font-size: 14px;
+}
+
+.input-group small {
+    font-size: 11px;
+    color: #666;
+}

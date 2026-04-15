@@ -96,7 +96,18 @@
                 <input id="description" placeholder="Descrição">
                 <input id="link" placeholder="Link do produto">
                 <input id="bid" type="text" placeholder="R$ 0,00">
-                <input id="budget" placeholder="Orçamento total (R$)" />
+
+                <div class="input-group">
+                    <label for="budget">Orçamento total</label>
+
+                    <div class="money-input">
+                        <span>R$</span>
+                        <input id="budget" type="text" placeholder="0,00" oninput="formatMoneyInput(this)"
+                            onblur="validateBudget(this)">
+                    </div>
+
+                    <small>Valor total que será usado na campanha</small>
+                </div>
 
                 <button onclick="criarAd()">Criar anúncio</button>
             </div>

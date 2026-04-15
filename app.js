@@ -479,6 +479,16 @@ async function criarAd() {
     }
 }
 
+// ================= VALIDAÇÃO DE ORÇAMENTO =================
+function validateBudget(input) {
+    const value = parseMoney(input.value);
+
+    if (value < 5) {
+        alert("Orçamento mínimo é R$ 5,00");
+        input.value = "";
+    }
+}
+
 let loadingAds = false;
 
 // ================= ADS =================
@@ -577,6 +587,19 @@ function parseMoney(value) {
             .replace(",", ".")
             .trim()
     );
+}
+
+// ================= FORMATAÇÃO DE MOEDA SIMPLES =================
+function formatMoneyInput(input) {
+    let value = input.value.replace(/\D/g, "");
+
+    value = (value / 100).toFixed(2) + "";
+
+    value = value.replace(".", ",");
+
+    value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    input.value = value;
 }
 
 // ================= INICIALIZAÇÃO =================
