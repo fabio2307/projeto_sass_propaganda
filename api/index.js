@@ -80,6 +80,10 @@ function checkRateLimit(ip) {
     return filtered.length <= 5;
 }
 
+export const config = {
+    api: { bodyParser: true },
+};
+
 export default async function handler(req, res) {
 
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.JWT_SECRET) {
@@ -89,16 +93,11 @@ export default async function handler(req, res) {
     try {
 
         // ================= BODY =================
-        let body = req.body;
+        let body = req.body || {};
 
-        if (!body && req.method === "POST") {
-            const buffers = [];
-            for await (const chunk of req) buffers.push(chunk);
-
-            const raw = Buffer.concat(buffers).toString();
-
+        if (req.method === "POST" && typeof body === "string") {
             try {
-                body = raw ? JSON.parse(raw) : {};
+                body = JSON.parse(body);
             } catch {
                 body = {};
             }
@@ -401,16 +400,6 @@ export default async function handler(req, res) {
 
         // ================= REENVIAR VERIFICAÇÃO (API) =================
         if (action === "resend") {
-
-            let body = {};
-
-            try {
-                body = typeof req.body === "string"
-                    ? JSON.parse(req.body)
-                    : req.body;
-            } catch {
-                return res.status(400).json({ error: "JSON inválido" });
-            }
 
             const { email } = body;
 
