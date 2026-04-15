@@ -233,7 +233,11 @@ async function login() {
         if (!data) return;
 
         if (data.error) {
-            throw new Error(data.error);
+            let msg = data.error;
+            if (data.missing && Array.isArray(data.missing)) {
+                msg += ` (faltando: ${data.missing.join(", ")})`;
+            }
+            throw new Error(msg);
         }
 
         if (!data.token) {
@@ -264,6 +268,7 @@ async function login() {
 
         } else {
             showToast("Erro no login: " + err.message, "error");
+            console.error("❌ Login error:", err.message);
         }
 
     } finally {

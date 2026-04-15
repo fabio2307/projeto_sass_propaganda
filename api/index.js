@@ -18,6 +18,10 @@ const stripe = process.env.STRIPE_SECRET_KEY
     : null;
 
 function getSupabase() {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error("Supabase não configurado: URL ou SERVICE_ROLE_KEY faltando");
+    }
+
     return createClient(
         process.env.SUPABASE_URL,
         process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -86,8 +90,18 @@ export const config = {
 
 export default async function handler(req, res) {
 
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.JWT_SECRET) {
-        return res.status(500).json({ error: "ENV não configurada" });
+    const missingEnvs = [];
+    if (!process.env.SUPABASE_URL) missingEnvs.push("SUPABASE_URL");
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missingEnvs.push("SUPABASE_SERVICE_ROLE_KEY");
+    if (!process.env.JWT_SECRET) missingEnvs.push("JWT_SECRET");
+
+    if (missingEnvs.length > 0) {
+        const msg = `Variáveis de ambiente faltando: ${missingEnvs.join(", ")}`;
+        console.error("❌", msg);
+        return res.status(500).json({
+            error: "Configuração incompleta",
+            missing: missingEnvs
+        });
     }
 
     try {
@@ -105,7 +119,17 @@ export default async function handler(req, res) {
 
         // ✅ IP corrigido (Vercel manda lista)
 
-        const supabase = getSupabase();
+        let supabase;
+        try {
+            supabase = getSupabase();
+        } catch (e) {
+            console.error("❌ Erro ao criar cliente Supabase:", e.message);
+            return res.status(500).json({
+                error: "Erro ao conectar com database",
+                detail: e.message
+            });
+        }
+
         const { action } = req.query;
 
         // ✅ IP corrigido
