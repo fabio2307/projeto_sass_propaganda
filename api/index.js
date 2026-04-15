@@ -499,23 +499,35 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            const { title, description, link, bid } = body;
+            const { title, description, link, bid, budget } = body;
 
-            // 🔥 normaliza bid (resolve 99% dos erros 400)
+            // 🔥 normaliza bid
             const bidNumber = Number(
                 String(bid).replace(/[^\d.-]/g, "").replace(",", ".")
             );
 
-            // 🔥 normaliza budget (mesma coisa)
+            // 🔥 normaliza budget
             const budgetNumber = Number(
                 String(budget).replace(/[^\d.-]/g, "").replace(",", ".")
             );
 
-            // 🔥 validação robusta
+            // 🔥 validações
             if (!title || !link || isNaN(bidNumber) || bidNumber <= 0) {
                 return res.status(400).json({
                     error: "Dados inválidos",
                     debug: { title, link, bid }
+                });
+            }
+
+            // 🔥 valida orçamento
+            if (isNaN(budgetNumber) || budgetNumber <= 0) {
+                return res.status(400).json({ error: "Orçamento inválido" });
+            }
+
+            // 🔥 valida saldo para orçamento
+            if ((user.balance || 0) < budgetNumber) {
+                return res.status(400).json({
+                    error: "Saldo insuficiente para orçamento"
                 });
             }
 
@@ -527,6 +539,7 @@ export default async function handler(req, res) {
                     .slice(0, 255); // evita overflow
             }
 
+            // 🔥 reset diário para controle de gastos (importante para novos anúncios)
             function resetDailyIfNeeded(ad) {
                 const today = new Date().toISOString().split("T")[0];
 
@@ -556,16 +569,6 @@ export default async function handler(req, res) {
                      error: "Saldo insuficiente para criar anúncio"
                  });
              }*/
-
-            if (isNaN(budgetNumber) || budgetNumber <= 0) {
-                return res.status(400).json({ error: "Orçamento inválido" });
-            }
-
-            if ((user.balance || 0) < budgetNumber) {
-                return res.status(400).json({
-                    error: "Saldo insuficiente para orçamento"
-                });
-            }
 
             console.log("CREATE AD:", {
                 user: user.id,
