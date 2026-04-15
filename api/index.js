@@ -19,6 +19,29 @@ function sanitize(str) {
     return String(str).replace(/[<>]/g, "");
 }
 
+// 🔥 reset diário para controle de gastos
+function resetDailyIfNeeded(ad) {
+    const today = new Date().toISOString().split("T")[0];
+
+    if (ad.last_reset !== today) {
+        ad.daily_spent = 0;
+        ad.last_reset = today;
+    }
+
+    return ad;
+}
+
+// 🔥 util
+function isAdEligible(ad) {
+    if (ad.status !== "active") return false;
+
+    if (ad.spent >= ad.budget) return false;
+
+    if (ad.daily_budget > 0 && ad.daily_spent >= ad.daily_budget) return false;
+
+    return true;
+}
+
 const clicks = new Map();
 
 function checkRateLimit(ip) {
@@ -483,6 +506,11 @@ export default async function handler(req, res) {
                 String(bid).replace(/[^\d.-]/g, "").replace(",", ".")
             );
 
+            // 🔥 normaliza budget (mesma coisa)
+            const budgetNumber = Number(
+                String(budget).replace(/[^\d.-]/g, "").replace(",", ".")
+            );
+
             // 🔥 validação robusta
             if (!title || !link || isNaN(bidNumber) || bidNumber <= 0) {
                 return res.status(400).json({
@@ -499,6 +527,17 @@ export default async function handler(req, res) {
                     .slice(0, 255); // evita overflow
             }
 
+            function resetDailyIfNeeded(ad) {
+                const today = new Date().toISOString().split("T")[0];
+
+                if (ad.last_reset !== today) {
+                    ad.daily_spent = 0;
+                    ad.last_reset = today;
+                }
+
+                return ad;
+            }
+
             const safeTitle = sanitizeText(title);
             const safeDescription = sanitizeText(description);
 
@@ -512,11 +551,21 @@ export default async function handler(req, res) {
             }
 
             // 🔥 valida saldo
-           /* if ((user.balance || 0) < bidNumber) {
+            /* if ((user.balance || 0) < bidNumber) {
+                 return res.status(400).json({
+                     error: "Saldo insuficiente para criar anúncio"
+                 });
+             }*/
+
+            if (isNaN(budgetNumber) || budgetNumber <= 0) {
+                return res.status(400).json({ error: "Orçamento inválido" });
+            }
+
+            if ((user.balance || 0) < budgetNumber) {
                 return res.status(400).json({
-                    error: "Saldo insuficiente para criar anúncio"
+                    error: "Saldo insuficiente para orçamento"
                 });
-            }*/
+            }
 
             console.log("CREATE AD:", {
                 user: user.id,
@@ -527,10 +576,14 @@ export default async function handler(req, res) {
                 .from("ads")
                 .insert([{
                     user_id: user.id,
-                    title: safeTitle,
-                    description: safeDescription,
-                    link: safeLink,
+                    title: sanitize(title),
+                    description: sanitize(description),
+                    link,
                     bid: bidNumber,
+                    budget: budgetNumber,
+                    spent: 0,
+                    daily_budget: budgetNumber / 30, // opcional automático
+                    daily_spent: 0,
                     clicks: 0,
                     views: 0,
                     status: "active"
@@ -577,15 +630,21 @@ export default async function handler(req, res) {
                 return res.json([]);
             }
 
-            // 🔥 ranking inteligente
-            const rankedAds = data.map(ad => {
-                const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
+            // 🔥 aplica reset + filtro primeiro
+            const validAds = data
+                .map(ad => resetDailyIfNeeded(ad))
+                .filter(ad => isAdEligible(ad));
 
-                return {
-                    ...ad,
-                    score: (ad.bid || 0) * 0.7 + ctr * 100 * 0.3
-                };
-            })
+            // 🔥 depois faz ranking
+            const rankedAds = validAds
+                .map(ad => {
+                    const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
+
+                    return {
+                        ...ad,
+                        score: (ad.bid || 0) * 0.7 + ctr * 100 * 0.3
+                    };
+                })
                 .sort((a, b) => b.score - a.score);
 
             return res.json(rankedAds);
@@ -600,24 +659,20 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "AdId obrigatório" });
             }
 
-            // 🔒 pega IP real
             const ip =
                 req.headers["x-forwarded-for"]?.split(",")[0] ||
                 req.socket.remoteAddress;
 
-            // 🔥 RATE LIMIT REAL (por IP + anúncio)
             const allowed = await checkRateLimitDB(supabase, ip, adId);
 
             if (!allowed) {
                 return res.json({ blocked: true });
             }
 
-            // 🔥 registra tentativa no log de rate limit
             await supabase
                 .from("click_logs")
                 .insert([{ ip, ad_id: adId }]);
 
-            // 🔥 registra clique
             await supabase
                 .from("ad_clicks")
                 .insert([{ ad_id: adId, ip }]);
@@ -633,7 +688,17 @@ export default async function handler(req, res) {
                 return res.status(404).json({ error: "Ad não encontrado" });
             }
 
-            // 🔎 pega usuário dono do anúncio
+            // 🔥 RESET DIÁRIO (IMPORTANTE)
+            const updatedAd = resetDailyIfNeeded(ad);
+
+            // 🔥 BLOQUEIO DE ORÇAMENTO (AQUI!)
+            if (!isAdEligible(updatedAd)) {
+                return res.status(400).json({
+                    error: "Anúncio pausado ou orçamento atingido"
+                });
+            }
+
+            // 🔎 pega usuário
             const { data: user } = await supabase
                 .from("users")
                 .select("*")
@@ -644,10 +709,10 @@ export default async function handler(req, res) {
                 return res.status(404).json({ error: "Usuário não encontrado" });
             }
 
-            // 💰 custo por clique
-            const cost = (ad.bid || 0) * 0.05;
+            // 💰 custo mínimo protegido
+            const cost = Math.max((ad.bid || 0) * 0.05, 0.01);
 
-            // ❌ sem saldo → pausa anúncio
+            // ❌ sem saldo → pausa
             if ((user.balance || 0) < cost) {
                 await supabase
                     .from("ads")
@@ -657,7 +722,6 @@ export default async function handler(req, res) {
                 return res.json({ paused: true });
             }
 
-            // 💸 desconta do usuário (AGORA CORRETO)
             const newUserBalance = user.balance - cost;
 
             await supabase
@@ -665,15 +729,18 @@ export default async function handler(req, res) {
                 .update({ balance: newUserBalance })
                 .eq("id", user.id);
 
-            // 📊 atualiza anúncio (SEM MEXER EM BALANCE DELE)
+            // 📊 atualiza anúncio (AGORA COM CONTROLE)
             await supabase
                 .from("ads")
                 .update({
-                    clicks: (ad.clicks || 0) + 1
+                    clicks: (ad.clicks || 0) + 1,
+                    spent: (ad.spent || 0) + cost,
+                    daily_spent: (updatedAd.daily_spent || 0) + cost,
+                    last_reset: updatedAd.last_reset
                 })
                 .eq("id", adId);
 
-            // 🧾 REGISTRO FINANCEIRO (AQUI!)
+            // 🧾 financeiro
             await supabase
                 .from("transactions")
                 .insert([{

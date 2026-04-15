@@ -420,8 +420,9 @@ async function criarAd() {
         const description = document.getElementById("description").value;
         const link = document.getElementById("link").value;
         const bid = parseMoney(document.getElementById("bid").value);
+        const budget = parseMoney(document.getElementById("budget").value);
 
-        console.log("ENVIANDO:", { title, description, link, bid }); // 🔥 DEBUG
+        console.log("ENVIANDO:", { title, description, link, bid, budget }); // 🔥 DEBUG
 
         if (!title || !link || isNaN(bid) || bid <= 0) {
             throw new Error("Preencha os campos corretamente");
@@ -429,6 +430,10 @@ async function criarAd() {
 
         if (bid < 1) {
             throw new Error("Valor mínimo do lance é R$ 1,00");
+        }
+
+        if (isNaN(budget) || budget <= 0) {
+            throw new Error("Orçamento inválido");
         }
 
         if (!description || description.length < 10) {
@@ -447,7 +452,7 @@ async function criarAd() {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${getToken()}`
             },
-            body: JSON.stringify({ title, description, link, bid })
+            body: JSON.stringify({ title, description, link, bid, budget })
         });
 
         const data = await res.json();

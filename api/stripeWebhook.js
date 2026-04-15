@@ -91,5 +91,58 @@ export default async function handler(req, res) {
         });
     }
 
+    if (action === "webhook") {
+        const sig = req.headers["stripe-signature"];
+
+        let event;
+
+        try {
+            event = stripe.webhooks.constructEvent(
+                req.body,
+                sig,
+                process.env.STRIPE_WEBHOOK_SECRET
+            );
+        } catch (err) {
+            console.error("❌ Webhook inválido:", err.message);
+            return res.status(400).send(`Webhook Error: ${err.message}`);
+        }
+
+        // 🎯 PAGAMENTO CONFIRMADO
+        if (event.type === "checkout.session.completed") {
+
+            const session = event.data.object;
+
+            const userId = session.metadata.user_id;
+            const amount = Number(session.metadata.amount);
+
+            console.log("💰 PAGAMENTO CONFIRMADO:", { userId, amount });
+
+            // 🔥 adiciona saldo
+            const { data: user } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", userId)
+                .single();
+
+            const newBalance = (user.balance || 0) + amount;
+
+            await supabase
+                .from("users")
+                .update({ balance: newBalance })
+                .eq("id", userId);
+
+            // 🧾 registra transação
+            await supabase
+                .from("transactions")
+                .insert([{
+                    user_id: userId,
+                    amount: amount,
+                    type: "deposit"
+                }]);
+        }
+
+        return res.json({ received: true });
+    }
+
     return res.json({ received: true });
 }
