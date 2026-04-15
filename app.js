@@ -16,7 +16,7 @@ async function safeJson(res) {
     // 🔥 TRATAMENTO DE TOKEN EXPIRADO
     if (data.error === "Token inválido") {
         localStorage.clear();
-        alert("Sessão expirada. Faça login novamente.");
+        showToast("Sessão expirada. Faça login novamente.", "error");
         window.location.href = "/index.html";
         return;
     }
@@ -37,6 +37,56 @@ function getToken() {
 // ================= TOKEN =================
 function setToken(token) {
     localStorage.setItem("token", token);
+}
+
+function showToast(message, type = "info") {
+    let container = document.getElementById("toastContainer");
+
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toastContainer";
+        container.style.position = "fixed";
+        container.style.right = "20px";
+        container.style.top = "20px";
+        container.style.zIndex = "9999";
+        container.style.display = "flex";
+        container.style.flexDirection = "column";
+        container.style.gap = "10px";
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement("div");
+    toast.innerText = message;
+    toast.style.padding = "14px 18px";
+    toast.style.borderRadius = "12px";
+    toast.style.color = "#fff";
+    toast.style.boxShadow = "0 12px 30px rgba(0,0,0,0.16)";
+    toast.style.maxWidth = "320px";
+    toast.style.fontSize = "14px";
+    toast.style.opacity = "0";
+    toast.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+    toast.style.transform = "translateY(-10px)";
+
+    if (type === "error") {
+        toast.style.background = "#ef4444";
+    } else if (type === "success") {
+        toast.style.background = "#22c55e";
+    } else {
+        toast.style.background = "#0f172a";
+    }
+
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.style.opacity = "1";
+        toast.style.transform = "translateY(0)";
+    });
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-10px)";
+        setTimeout(() => toast.remove(), 200);
+    }, 4000);
 }
 
 // ================= LOGOUT =================
@@ -67,7 +117,7 @@ async function register() {
             },
             body: JSON.stringify({
                 name: document.getElementById("registerName").value,
-                birthdate: document.getElementById("registerBirth").value, // ✅ corrigido
+                birthDate: document.getElementById("registerBirth").value,
                 email: document.getElementById("registerEmail").value,
                 password: document.getElementById("registerPassword").value
             })
@@ -75,16 +125,14 @@ async function register() {
 
         const data = await safeJson(res);
 
-        alert("Conta criada! Verifique seu email antes de entrar 📩");
+        showToast("Conta criada! Verifique seu email antes de entrar 📩", "success");
 
-        // 🧹 limpa tudo automaticamente
         limparCamposCadastro();
-
         showLogin();
 
     } catch (err) {
         console.error(err);
-        alert("Erro: " + err.message);
+        showToast("Erro: " + err.message, "error");
     }
 }
 
@@ -96,7 +144,7 @@ async function resendVerification() {
         const email = document.getElementById("loginEmail").value;
 
         if (!email) {
-            alert("Digite seu email para reenviar a verificação");
+            showToast("Digite seu email para reenviar a verificação", "error");
             return;
         }
 
@@ -114,10 +162,10 @@ async function resendVerification() {
             throw new Error(data.error || "Erro ao reenviar");
         }
 
-        alert("Email de verificação reenviado!");
+        showToast("Email de verificação reenviado!", "success");
 
     } catch (err) {
-        alert(err.message);
+        showToast(err.message, "error");
     }
 }
 
@@ -184,44 +232,38 @@ async function login() {
         // 🚫 se safeJson já redirecionou
         if (!data) return;
 
-        // 🔥 trata erro da API corretamente
         if (data.error) {
             throw new Error(data.error);
         }
 
-        // 🔥 valida token
         if (!data.token) {
             throw new Error("Login inválido");
         }
 
-        // salvar sessão
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
 
-        // trocar tela
         document.getElementById("loginBox").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");
 
-        // carregar dados
         await carregarSaldo();
         await carregarAds();
 
-        alert("Login realizado!");
+        showToast("Login realizado!", "success");
 
     } catch (err) {
 
         if (err.message.includes("Verifique seu email")) {
 
-            alert("📩 Verifique seu email antes de fazer login");
+            showToast("📩 Verifique seu email antes de fazer login", "info");
 
-            // 🔥 MOSTRA O BOTÃO
             const resendBox = document.getElementById("resendBox");
             if (resendBox) {
                 resendBox.classList.remove("hidden");
             }
 
         } else {
-            alert("Erro no login: " + err.message);
+            showToast("Erro no login: " + err.message, "error");
         }
 
     } finally {
@@ -263,10 +305,10 @@ async function carregarSaldo() {
 
         const data = await safeJson(res);
 
-        document.getElementById("saldo").innerText = data.balance || 0;
+        document.getElementById("saldo").innerText = formatCurrency(data.balance || 0);
 
     } catch (err) {
-        alert(err.message);
+        showToast(err.message, "error");
     }
 }
 
@@ -332,7 +374,8 @@ function renderAds(ads) {
             </div>
 
             <div class="ad-extra">
-                <span>💰 Bid: ${ad.bid}</span>
+                <span>💰 Lance: ${formatCurrency(ad.bid)}</span>
+                <span>⏳ Restante: ${formatCurrency(ad.remaining || 0)}</span>
                 <span>📌 Status: ${escapeHTML(ad.status || "active")}</span>
             </div>
 
@@ -372,17 +415,16 @@ async function registrarClick(adId) {
 
         // 🚫 bloqueio imediato
         if (data?.blocked) {
-            console.log("Clique bloqueado por segurança");
+            showToast("Clique bloqueado por segurança", "error");
             return;
         }
 
-        // 🔥 tratamento de resposta
         if (data?.paused) {
-            alert("⚠️ Anúncio pausado por saldo insuficiente");
+            showToast("⚠️ Anúncio pausado por saldo insuficiente", "error");
         }
 
-        // 🚨 erro da API
         if (data?.error) {
+            showToast(data.error, "error");
             console.error("Erro da API:", data.error);
         }
 
@@ -463,7 +505,7 @@ async function criarAd() {
             throw new Error(data.error || "Erro ao criar anúncio");
         }
 
-        alert("Anúncio criado com sucesso 🚀");
+        showToast("Anúncio criado com sucesso 🚀", "success");
 
         document.getElementById("title").value = "";
         document.getElementById("description").value = "";
@@ -475,7 +517,7 @@ async function criarAd() {
 
     } catch (err) {
         console.error("ERRO:", err);
-        alert(err.message);
+        showToast(err.message, "error");
     }
 }
 
@@ -484,7 +526,7 @@ function validateBudget(input) {
     const value = parseMoney(input.value);
 
     if (value < 5) {
-        alert("Orçamento mínimo é R$ 5,00");
+        showToast("Orçamento mínimo é R$ 5,00", "error");
         input.value = "";
     }
 }
@@ -496,6 +538,15 @@ async function carregarAds() {
 
     if (loadingAds) return;
     loadingAds = true;
+
+    const adsContainer = document.getElementById("ads");
+    if (adsContainer) {
+        adsContainer.innerHTML = `
+            <div class="ad-card skeleton"></div>
+            <div class="ad-card skeleton"></div>
+            <div class="ad-card skeleton"></div>
+        `;
+    }
 
     try {
         const res = await fetch(`${API}?action=myAds`, {
@@ -510,7 +561,7 @@ async function carregarAds() {
         atualizarStats(ads);
 
     } catch (err) {
-        alert(err.message);
+        showToast(err.message, "error");
     } finally {
         loadingAds = false;
     }
@@ -545,7 +596,7 @@ async function pagar() {
         window.open(data.url, "_blank");
 
     } catch (err) {
-        alert(err.message);
+        showToast(err.message, "error");
     }
 }
 
@@ -587,6 +638,13 @@ function parseMoney(value) {
             .replace(",", ".")
             .trim()
     );
+}
+
+function formatCurrency(value) {
+    return Number(value || 0).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+    });
 }
 
 // ================= FORMATAÇÃO DE MOEDA SIMPLES =================
@@ -631,7 +689,7 @@ async function init() {
 
     // 🔥 retorno de pagamento
     if (window.location.search.includes("success")) {
-        alert("Pagamento aprovado!");
+        showToast("Pagamento aprovado!", "success");
         await carregarSaldo();
         window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -657,7 +715,7 @@ async function toggleAd(adId, status) {
         const data = await res.json();
 
         if (data.error) {
-            alert(data.error);
+            showToast(data.error, "error");
             return;
         }
 

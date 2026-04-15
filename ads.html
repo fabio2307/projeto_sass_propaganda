@@ -23,6 +23,41 @@
     <script>
         const API = "/api";
 
+        function showToast(message) {
+            let container = document.getElementById("toastContainer");
+
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "toastContainer";
+                container.style.position = "fixed";
+                container.style.right = "20px";
+                container.style.top = "20px";
+                container.style.zIndex = "9999";
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement("div");
+            toast.innerText = message;
+            toast.style.padding = "12px 18px";
+            toast.style.marginTop = "10px";
+            toast.style.borderRadius = "10px";
+            toast.style.background = "rgba(15, 23, 42, 0.95)";
+            toast.style.color = "#fff";
+            toast.style.boxShadow = "0 12px 24px rgba(0,0,0,0.16)";
+            toast.style.opacity = "0";
+            toast.style.transition = "opacity 0.2s ease";
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.style.opacity = "1";
+            });
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         // 🔥 CARREGA ANÚNCIOS
         async function carregarAdsPublicos() {
             try {
@@ -103,7 +138,7 @@
                 const data = await res.json();
 
                 if (data.paused) {
-                    alert("Anúncio pausado por saldo insuficiente");
+                    showToast("Anúncio pausado por saldo insuficiente");
                 }
 
             } catch (err) {

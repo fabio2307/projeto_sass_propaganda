@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // ================= CRUD =================
@@ -21,8 +21,21 @@ export async function listarAds() {
 // ================= IA =================
 
 export function calcularScore(ad) {
-    if (ad.views === 0) return 0;
-    return (ad.clicks / ad.views) * 0.7 + (ad.bid * 0.3);
+    const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
+    const ageHours = ad.created_at
+        ? Math.max((Date.now() - new Date(ad.created_at)) / 3600000, 0)
+        : 0;
+    const recency = Math.max(0, 1 - ageHours / 72);
+    const remainingFactor = Math.min((ad.remaining || 0) / Math.max(ad.budget || 1, 1), 1);
+    const repetitionPenalty = Math.min((ad.views || 0) / 100, 0.2);
+
+    return (
+        (ad.bid || 0) * 0.6 +
+        ctr * 0.2 +
+        recency * 0.1 +
+        remainingFactor * 0.1 -
+        repetitionPenalty
+    );
 }
 
 export async function otimizarAds() {

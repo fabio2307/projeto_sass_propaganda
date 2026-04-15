@@ -31,6 +31,16 @@
             <p id="spent">...</p>
         </div>
 
+        <div class="card">
+            <h3>🖱 Total de cliques</h3>
+            <p id="clicks">...</p>
+        </div>
+
+        <div class="card">
+            <h3>💸 CPC médio</h3>
+            <p id="cpc">...</p>
+        </div>
+
     </div>
 
     <h3 style="padding:20px;">📢 Meus Anúncios</h3>
@@ -58,10 +68,23 @@
             const data = await res.json();
 
             document.getElementById("balance").innerText =
-                "R$ " + data.balance.toFixed(2);
+                data.balance.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                });
 
             document.getElementById("spent").innerText =
-                "R$ " + data.totalSpent.toFixed(2);
+                data.totalSpent.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                });
+
+            document.getElementById("clicks").innerText = data.totalClicks || 0;
+            document.getElementById("cpc").innerText =
+                (data.cpc || 0).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL"
+                });
 
             renderAds(data.ads);
         }

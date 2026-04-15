@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from "bcryptjs";
 import Stripe from "stripe";
 import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { Resend } from 'resend';
 
 const baseUrl = process.env.BASE_URL || "https://projeto-sass-propaganda.vercel.app";
@@ -13,6 +14,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const stripe = process.env.STRIPE_SECRET_KEY
     ? new Stripe(process.env.STRIPE_SECRET_KEY)
     : null;
+
+// ✅ Supabase seguro no backend
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 // 🔥 sanitização básica contra XSS
 function sanitize(str) {
@@ -35,7 +42,7 @@ function resetDailyIfNeeded(ad) {
 function isAdEligible(ad) {
     if (ad.status !== "active") return false;
 
-    if (ad.spent >= ad.budget) return false;
+    if ((ad.remaining || 0) <= 0) return false;
 
     if (ad.daily_budget > 0 && ad.daily_spent >= ad.daily_budget) return false;
 
@@ -72,14 +79,9 @@ function checkRateLimit(ip) {
 
 export default async function handler(req, res) {
 
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.JWT_SECRET) {
         return res.status(500).json({ error: "ENV não configurada" });
     }
-
-    const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY
-    );
 
     try {
 
@@ -125,15 +127,24 @@ export default async function handler(req, res) {
         }
 
         async function getUserFromToken(token) {
-            if (!token) return null;
+            if (!token || !process.env.JWT_SECRET) return null;
 
-            const { data } = await supabase
-                .from("users")
-                .select("*")
-                .eq("token", token.trim())
-                .maybeSingle();
+            try {
+                const payload = jwt.verify(token.trim(), process.env.JWT_SECRET);
+                const userId = payload?.sub || payload?.user_id || payload?.id;
 
-            return data || null;
+                if (!userId) return null;
+
+                const { data } = await supabase
+                    .from("users")
+                    .select("*")
+                    .eq("id", userId)
+                    .maybeSingle();
+
+                return data || null;
+            } catch (err) {
+                return null;
+            }
         }
 
         // ================= REGISTER =================
@@ -362,8 +373,12 @@ export default async function handler(req, res) {
                 });
             }
 
-            // 🔥 NOVO: gera novo token (sem quebrar o resto)
-            const newToken = crypto.randomUUID();
+            // � gera JWT expirável
+            const newToken = jwt.sign(
+                { sub: user.id },
+                process.env.JWT_SECRET,
+                { expiresIn: "24h" }
+            );
 
             await supabase
                 .from("users")
@@ -371,8 +386,8 @@ export default async function handler(req, res) {
                 .eq("id", user.id);
 
             return res.json({
-                token: newToken, // 🔥 agora retorna o novo token
-                user: { id: user.id } // mantém compatibilidade com seu frontend
+                token: newToken,
+                user: { id: user.id }
             });
         }
 
@@ -563,34 +578,50 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Link inválido" });
             }
 
-            // 🔥 valida saldo
-            /* if ((user.balance || 0) < bidNumber) {
-                 return res.status(400).json({
-                     error: "Saldo insuficiente para criar anúncio"
-                 });
-             }*/
+            // 🔥 reserva orçamento imediatamente
+            const { error: updateError } = await supabase
+                .from("users")
+                .update({ balance: (user.balance || 0) - budgetNumber })
+                .eq("id", user.id);
+
+            if (updateError) {
+                return res.status(400).json({
+                    error: "Não foi possível reservar o saldo",
+                    details: updateError.message
+                });
+            }
 
             console.log("CREATE AD:", {
                 user: user.id,
-                bid: bidNumber
+                bid: bidNumber,
+                budget: budgetNumber
             });
 
             const { error } = await supabase
                 .from("ads")
                 .insert([{
                     user_id: user.id,
-                    title: sanitize(title),
-                    description: sanitize(description),
-                    link,
+                    title: safeTitle,
+                    description: safeDescription,
+                    link: safeLink,
                     bid: bidNumber,
                     budget: budgetNumber,
+                    reserved_budget: budgetNumber,
                     spent: 0,
-                    daily_budget: budgetNumber / 30, // opcional automático
+                    remaining: budgetNumber,
+                    daily_budget: budgetNumber / 30,
                     daily_spent: 0,
                     clicks: 0,
                     views: 0,
                     status: "active"
                 }]);
+
+            if (error) {
+                await supabase
+                    .from("users")
+                    .update({ balance: user.balance || 0 })
+                    .eq("id", user.id);
+            }
 
             if (error) {
                 console.error("SUPABASE ERROR:", error);
@@ -638,14 +669,27 @@ export default async function handler(req, res) {
                 .map(ad => resetDailyIfNeeded(ad))
                 .filter(ad => isAdEligible(ad));
 
-            // 🔥 depois faz ranking
+            // 🔥 depois faz ranking com recência, orçamento e novidade
             const rankedAds = validAds
                 .map(ad => {
                     const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
+                    const ageHours = ad.created_at
+                        ? Math.max((Date.now() - new Date(ad.created_at)) / 3600000, 0)
+                        : 0;
+                    const recency = Math.max(0, 1 - ageHours / 72);
+                    const remainingFactor = Math.min((ad.remaining || 0) / Math.max(ad.budget || 1, 1), 1);
+                    const repetitionPenalty = Math.min((ad.views || 0) / 100, 0.25);
+
+                    const score =
+                        (ad.bid || 0) * 0.6 +
+                        (ctr * 100) * 0.2 +
+                        recency * 10 * 0.1 +
+                        remainingFactor * 10 * 0.1 -
+                        repetitionPenalty;
 
                     return {
                         ...ad,
-                        score: (ad.bid || 0) * 0.7 + ctr * 100 * 0.3
+                        score
                     };
                 })
                 .sort((a, b) => b.score - a.score);
@@ -701,57 +745,48 @@ export default async function handler(req, res) {
                 });
             }
 
-            // 🔎 pega usuário
-            const { data: user } = await supabase
-                .from("users")
-                .select("*")
-                .eq("id", ad.user_id)
-                .maybeSingle();
-
-            if (!user) {
-                return res.status(404).json({ error: "Usuário não encontrado" });
+            if (!ad.user_id) {
+                return res.status(400).json({ error: "Anúncio inválido" });
             }
 
-            // 💰 custo mínimo protegido
-            const cost = Math.max((ad.bid || 0) * 0.05, 0.01);
+            // valida orçamento do anúncio
+            const cost = Number(ad.bid || 0);
 
-            // ❌ sem saldo → pausa
-            if ((user.balance || 0) < cost) {
+            if ((updatedAd.remaining || 0) < cost) {
                 await supabase
                     .from("ads")
-                    .update({ status: "paused" })
+                    .update({ status: "inactive" })
                     .eq("id", adId);
 
-                return res.json({ paused: true });
+                return res.status(400).json({ error: "Orçamento do anúncio esgotado" });
             }
 
-            const newUserBalance = user.balance - cost;
+            const newRemaining = (updatedAd.remaining || 0) - cost;
+            const newSpent = (updatedAd.spent || 0) + cost;
+            const newStatus = newRemaining <= 0 ? "inactive" : "active";
 
-            await supabase
-                .from("users")
-                .update({ balance: newUserBalance })
-                .eq("id", user.id);
-
-            // 📊 atualiza anúncio (AGORA COM CONTROLE)
+            // 📊 atualiza anúncio com orçamento reservado
             await supabase
                 .from("ads")
                 .update({
                     clicks: (ad.clicks || 0) + 1,
-                    spent: (ad.spent || 0) + cost,
+                    spent: newSpent,
+                    remaining: newRemaining,
                     daily_spent: (updatedAd.daily_spent || 0) + cost,
-                    last_reset: updatedAd.last_reset
+                    last_reset: updatedAd.last_reset,
+                    status: newStatus
                 })
                 .eq("id", adId);
 
-            // 🧾 financeiro
+            // 🧾 registra transação financeira de clique
             await supabase
                 .from("transactions")
                 .insert([{
-                    user_id: user.id,
+                    user_id: ad.user_id,
                     amount: -cost,
                     type: "click",
                     ad_id: ad.id
-                }]);
+                }] );
 
             return res.json({ success: true });
         }
@@ -782,15 +817,14 @@ export default async function handler(req, res) {
         //
         async function checkRateLimitDB(supabase, ip, adId) {
             try {
+                const from = new Date(Date.now() - 60000).toISOString();
+
                 const { data, error } = await supabase
                     .from("click_logs")
                     .select("id")
                     .eq("ip", ip)
-                    .eq("ad_id", adId) // 🔥 importante (evita travar todos os anúncios)
-                    .gte(
-                        "created_at",
-                        new Date(Date.now() - 30000).toISOString()
-                    );
+                    .eq("ad_id", adId)
+                    .gte("created_at", from);
 
                 if (error) {
                     console.error("Erro rate limit:", error);
@@ -799,12 +833,12 @@ export default async function handler(req, res) {
 
                 const total = data ? data.length : 0;
 
-                // 🔥 limite: 5 cliques em 30s por anúncio + IP
-                return total < 5;
+                // 🔥 limite: 30 cliques em 60s por IP/ad
+                return total < 30;
 
             } catch (err) {
                 console.error("Erro inesperado rate limit:", err);
-                return true; // 🔥 fallback seguro
+                return true;
             }
         }
 
@@ -881,7 +915,7 @@ export default async function handler(req, res) {
 
             const { id, status } = body;
 
-            if (!id || !["active", "paused"].includes(status)) {
+            if (!id || !["active", "paused", "inactive"].includes(status)) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
 
@@ -899,9 +933,33 @@ export default async function handler(req, res) {
                 return res.status(403).json({ error: "Sem permissão" });
             }
 
+            const updates = { status };
+
+            if (status === "inactive") {
+                const refundAmount = Number(ad.remaining || 0);
+
+                if (refundAmount > 0) {
+                    await supabase
+                        .from("users")
+                        .update({ balance: (user.balance || 0) + refundAmount })
+                        .eq("id", user.id);
+
+                    await supabase
+                        .from("transactions")
+                        .insert([{
+                            user_id: user.id,
+                            amount: refundAmount,
+                            type: "refund",
+                            ad_id: ad.id
+                        }]);
+
+                    updates.remaining = 0;
+                }
+            }
+
             await supabase
                 .from("ads")
-                .update({ status })
+                .update(updates)
                 .eq("id", id);
 
             return res.json({ success: true });
@@ -939,9 +997,16 @@ export default async function handler(req, res) {
                 ?.filter(t => t.amount < 0)
                 .reduce((acc, t) => acc + Math.abs(t.amount), 0) || 0;
 
+            const totalClicks = ads?.reduce((acc, ad) => acc + (ad.clicks || 0), 0) || 0;
+            const totalAds = ads?.length || 0;
+            const cpc = totalClicks > 0 ? totalSpent / totalClicks : 0;
+
             return res.json({
                 balance: userData?.balance || 0,
                 totalSpent,
+                totalClicks,
+                totalAds,
+                cpc,
                 ads
             });
         }
