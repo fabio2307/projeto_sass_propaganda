@@ -767,6 +767,18 @@ function formatMoneyInput(input) {
     input.value = "R$ " + value.replace(".", ",");
 }
 
+// ================= FORMATAÇÃO DE MOEDA (LEGACY) =================
+function formatarMoeda(input) {
+    let value = input.value.replace(/\D/g, "");
+
+    value = (value / 100).toFixed(2) + "";
+    value = value.replace(".", ",");
+
+    value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    input.value = "R$ " + value;
+}
+
 // ================= PARSE DE MOEDA =================
 function parseMoney(value) {
     return Number(
