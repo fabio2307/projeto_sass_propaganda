@@ -278,6 +278,10 @@ async function login() {
         document.getElementById("loginBox").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");
 
+        // mostrar formulário de criação de anúncio
+        const createAd = document.querySelector(".create-ad");
+        if (createAd) createAd.style.display = "block";
+
         await carregarSaldo();
         await carregarAds();
 
@@ -897,4 +901,3 @@ window.showLogin = showLogin;
 window.criarAd = criarAd;
 window.resendVerification = resendVerification;
 window.carregarTransacoes = carregarTransacoes;
-document.addEventListener("DOMContentLoaded", init);
