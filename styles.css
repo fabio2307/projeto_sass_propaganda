@@ -12,7 +12,7 @@ body {
   margin: 100px auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   background: #020617;
   padding: 30px 25px;
   border-radius: 16px;
@@ -575,18 +575,51 @@ body {
 #formRegister {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 /* INPUTS DO CADASTRO */
 #formRegister input {
   width: 100%;
   box-sizing: border-box;
+  padding: 16px;
+  border: 2px solid #1e293b;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 15px;
+  transition: border-color 0.2s ease;
+}
+
+#formRegister input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* BOTÃO DO CADASTRO */
 #formRegister button {
   width: 100%;
+  padding: 16px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#formRegister button:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+#formRegister button:active {
+  transform: translateY(0);
 }
 
 /* IDADE (visual mais suave) */
