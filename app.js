@@ -754,19 +754,17 @@ async function pagar() {
     }
 }
 
-// ================= VALIDAÇÃO DE ORÇAMENTO =================
-function validateBudget(input) {
-    const value = parseMoney(input.value);
-    const minBudget = 5.00;
+// ================= FORMATAÇÃO DE MOEDA =================
+function formatMoneyInput(input) {
+    let value = input.value.replace(/\D/g, "");
 
-    if (value > 0 && value < minBudget) {
-        showToast(`Orçamento mínimo: R$ ${minBudget.toFixed(2).replace(".", ",")}`, "warning");
-        input.style.borderColor = "#f59e0b";
-        return false;
-    } else {
-        input.style.borderColor = "#1e293b";
-        return true;
+    if (value === "") {
+        input.value = "";
+        return;
     }
+
+    value = (Number(value) / 100).toFixed(2);
+    input.value = "R$ " + value.replace(".", ",");
 }
 
 // ================= PARSE DE MOEDA =================
@@ -901,3 +899,5 @@ window.showLogin = showLogin;
 window.criarAd = criarAd;
 window.resendVerification = resendVerification;
 window.carregarTransacoes = carregarTransacoes;
+window.formatMoneyInput = formatMoneyInput;
+window.validateBudget = validateBudget;
