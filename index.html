@@ -30,15 +30,25 @@
 
         <form id="formRegister" onsubmit="event.preventDefault(); register();">
 
-            <input id="registerName" type="text" placeholder="Nome" required>
+            <div class="form-group">
+                <input id="registerName" type="text" placeholder="Nome" required>
+            </div>
 
-            <input id="registerBirth" type="date" required onchange="calcularIdade()">
+            <div class="form-group">
+                <input id="registerBirth" type="date" required onchange="calcularIdade()">
+            </div>
 
-            <input id="registerAge" type="number" placeholder="Idade" readonly>
+            <div class="form-group">
+                <input id="registerAge" type="number" placeholder="Idade" readonly>
+            </div>
 
-            <input id="registerEmail" type="email" placeholder="Email" required>
+            <div class="form-group">
+                <input id="registerEmail" type="email" placeholder="Email" required>
+            </div>
 
-            <input id="registerPassword" type="password" placeholder="Senha" required>
+            <div class="form-group">
+                <input id="registerPassword" type="password" placeholder="Senha" required>
+            </div>
 
             <button type="submit">Cadastrar</button>
 
