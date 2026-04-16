@@ -785,6 +785,21 @@ function formatMoney(value) {
     });
 }
 
+// ================= VALIDAÇÃO DE ORÇAMENTO =================
+function validateBudget(input) {
+    const value = parseMoney(input.value);
+    const minBudget = 5.00;
+
+    if (value > 0 && value < minBudget) {
+        showToast(`Orçamento mínimo: R$ ${minBudget.toFixed(2).replace(".", ",")}`, "warning");
+        input.style.borderColor = "#f59e0b";
+        return false;
+    } else {
+        input.style.borderColor = "#1e293b";
+        return true;
+    }
+}
+
 // ================= INICIALIZAÇÃO =================
 async function init() {
     const token = getToken();
