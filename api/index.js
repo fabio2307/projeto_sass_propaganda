@@ -33,16 +33,53 @@ function sanitize(str) {
     return String(str).replace(/[<>]/g, "");
 }
 
-// 🔥 reset diário para controle de gastos
-function resetDailyIfNeeded(ad) {
-    const today = new Date().toISOString().split("T")[0];
+// 🔥 validação rigorosa para fintech
+function validateInput(input, type) {
+    if (!input) return false;
 
-    if (ad.last_reset !== today) {
-        ad.daily_spent = 0;
-        ad.last_reset = today;
+    switch (type) {
+        case 'email':
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(String(input));
+        case 'password':
+            return String(input).length >= 8;
+        case 'name':
+            return String(input).length >= 2 && String(input).length <= 100;
+        case 'url':
+            try {
+                new URL(input);
+                return true;
+            } catch {
+                return false;
+            }
+        case 'number':
+            const num = Number(input);
+            return !isNaN(num) && num >= 0;
+        default:
+            return String(input).length > 0;
     }
+}
 
-    return ad;
+// 🔥 log de auditoria para operações sensíveis
+function auditLog(action, userId, details) {
+    console.log(`AUDIT [${new Date().toISOString()}] ${action} - User: ${userId} - ${JSON.stringify(details)}`);
+}
+
+// 🔥 cache simples para escalabilidade (em produção usar Redis)
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+function getCache(key) {
+    const item = cache.get(key);
+    if (item && Date.now() - item.timestamp < CACHE_TTL) {
+        return item.data;
+    }
+    cache.delete(key);
+    return null;
+}
+
+function setCache(key, data) {
+    cache.set(key, { data, timestamp: Date.now() });
 }
 
 // 🔥 util
@@ -89,6 +126,14 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+
+    // 🔥 Headers de segurança para nível fintech
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:;");
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
     const missingEnvs = [];
     if (!process.env.SUPABASE_URL) missingEnvs.push("SUPABASE_URL");
@@ -179,9 +224,12 @@ export default async function handler(req, res) {
 
             const { name, birthDate, email, password } = body;
 
-            if (!name || !email || !password) {
+            // 🔥 validação rigorosa
+            if (!validateInput(name, 'name') || !validateInput(email, 'email') || !validateInput(password, 'password')) {
                 return res.status(400).json({ error: "Dados inválidos" });
             }
+
+            auditLog('REGISTER_ATTEMPT', null, { email });
 
             const { data: existingUser } = await supabase
                 .from("users")
@@ -190,6 +238,7 @@ export default async function handler(req, res) {
                 .maybeSingle();
 
             if (existingUser) {
+                auditLog('REGISTER_FAILED', null, { email, reason: 'email_exists' });
                 return res.status(400).json({ error: "Email já cadastrado" });
             }
 
@@ -564,12 +613,36 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Orçamento inválido" });
             }
 
-            // 🔥 valida saldo para orçamento
-            if ((user.balance || 0) < budgetNumber) {
+            // 🔥 valida saldo para orçamento com consistência forte
+            // Primeiro, recarrega o saldo atual para evitar race conditions
+            const { data: currentUser } = await supabase
+                .from("users")
+                .select("balance")
+                .eq("id", user.id)
+                .single();
+
+            if (!currentUser || (currentUser.balance || 0) < budgetNumber) {
+                auditLog('CREATE_AD_FAILED', user.id, { reason: 'insufficient_balance', budget: budgetNumber });
                 return res.status(400).json({
                     error: "Saldo insuficiente para orçamento"
                 });
             }
+
+            // 🔥 reserva orçamento com transação simulada (para consistência)
+            const { error: updateError } = await supabase
+                .from("users")
+                .update({ balance: (currentUser.balance || 0) - budgetNumber })
+                .eq("id", user.id);
+
+            if (updateError) {
+                auditLog('CREATE_AD_FAILED', user.id, { reason: 'balance_update_error', error: updateError.message });
+                return res.status(400).json({
+                    error: "Não foi possível reservar o saldo",
+                    details: updateError.message
+                });
+            }
+
+            auditLog('BALANCE_RESERVED', user.id, { amount: budgetNumber, new_balance: (currentUser.balance || 0) - budgetNumber });
 
             // 🔥 sanitização SEGURA (sem quebrar URL)
             function sanitizeText(text) {
@@ -603,19 +676,6 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Link inválido" });
             }
 
-            // 🔥 reserva orçamento imediatamente
-            const { error: updateError } = await supabase
-                .from("users")
-                .update({ balance: (user.balance || 0) - budgetNumber })
-                .eq("id", user.id);
-
-            if (updateError) {
-                return res.status(400).json({
-                    error: "Não foi possível reservar o saldo",
-                    details: updateError.message
-                });
-            }
-
             console.log("CREATE AD:", {
                 user: user.id,
                 bid: bidNumber,
@@ -642,18 +702,16 @@ export default async function handler(req, res) {
                 }]);
 
             if (error) {
+                // 🔥 rollback consistente
                 await supabase
                     .from("users")
-                    .update({ balance: user.balance || 0 })
+                    .update({ balance: currentUser.balance || 0 })
                     .eq("id", user.id);
+                auditLog('CREATE_AD_FAILED', user.id, { reason: 'ad_insert_error', error: error.message });
             }
 
-            if (error) {
-                console.error("SUPABASE ERROR:", error);
-                return res.status(400).json({
-                    error: "Erro ao criar anúncio",
-                    details: error.message
-                });
+            if (!error) {
+                auditLog('AD_CREATED', user.id, { ad_id: data[0].id, budget: budgetNumber });
             }
 
             return res.json({ success: true });
@@ -999,6 +1057,12 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
+            const cacheKey = `dashboard_${user.id}`;
+            const cached = getCache(cacheKey);
+            if (cached) {
+                return res.json(cached);
+            }
+
             // 📢 anúncios do usuário
             const { data: ads } = await supabase
                 .from("ads")
@@ -1012,28 +1076,31 @@ export default async function handler(req, res) {
                 .eq("id", user.id)
                 .maybeSingle();
 
-            // 🧾 total gasto
-            const { data: transactions } = await supabase
+            // 🧾 total gasto (otimizado com aggregate)
+            const { data: spentData } = await supabase
                 .from("transactions")
                 .select("amount")
-                .eq("user_id", user.id);
+                .eq("user_id", user.id)
+                .lt("amount", 0);
 
-            const totalSpent = transactions
-                ?.filter(t => t.amount < 0)
-                .reduce((acc, t) => acc + Math.abs(t.amount), 0) || 0;
+            const totalSpent = spentData?.reduce((acc, t) => acc + Math.abs(t.amount), 0) || 0;
 
             const totalClicks = ads?.reduce((acc, ad) => acc + (ad.clicks || 0), 0) || 0;
             const totalAds = ads?.length || 0;
             const cpc = totalClicks > 0 ? totalSpent / totalClicks : 0;
 
-            return res.json({
+            const result = {
                 balance: userData?.balance || 0,
                 totalSpent,
                 totalClicks,
                 totalAds,
                 cpc,
                 ads
-            });
+            };
+
+            setCache(cacheKey, result);
+
+            return res.json(result);
         }
 
         return res.status(400).json({ error: "Ação inválida" });

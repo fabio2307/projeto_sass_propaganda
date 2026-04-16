@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <title>Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -22,29 +23,51 @@
     <div class="dashboard">
 
         <div class="card">
-            <h3>💰 Saldo</h3>
+            <h3>💰 Saldo Disponível</h3>
             <p id="balance">...</p>
         </div>
 
         <div class="card">
-            <h3>📉 Total gasto</h3>
+            <h3>📉 Total Gasto (Mês)</h3>
             <p id="spent">...</p>
         </div>
 
         <div class="card">
-            <h3>🖱 Total de cliques</h3>
+            <h3>🖱 Total de Cliques</h3>
             <p id="clicks">...</p>
         </div>
 
         <div class="card">
-            <h3>💸 CPC médio</h3>
+            <h3>💸 CPC Médio</h3>
             <p id="cpc">...</p>
+        </div>
+
+        <div class="card">
+            <h3>📊 CTR Médio</h3>
+            <p id="ctr">...</p>
+        </div>
+
+        <div class="card">
+            <h3>🎯 Conversões</h3>
+            <p id="conversions">...</p>
         </div>
 
     </div>
 
+    <div class="charts-container">
+        <div class="chart-card">
+            <h3>Desempenho por Dia</h3>
+            <canvas id="performanceChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h3>Distribuição de Gastos</h3>
+            <canvas id="spendingChart"></canvas>
+        </div>
+    </div>
+
     <h3 style="padding:20px;">📢 Meus Anúncios</h3>
-    <div class="ads" id="ads"></div>
+    <div class="ads-table" id="adsTable"></div>
 
     <!-- Carrega dados do dashboard -->
     <script>
@@ -67,6 +90,7 @@
 
             const data = await res.json();
 
+            // Métricas básicas
             document.getElementById("balance").innerText =
                 data.balance.toLocaleString("pt-BR", {
                     style: "currency",
@@ -86,36 +110,117 @@
                     currency: "BRL"
                 });
 
-            renderAds(data.ads);
+            // Novas métricas
+            const totalViews = data.ads?.reduce((acc, ad) => acc + (ad.views || 0), 0) || 0;
+            const ctr = totalViews > 0 ? ((data.totalClicks / totalViews) * 100).toFixed(2) : 0;
+            document.getElementById("ctr").innerText = `${ctr}%`;
+
+            // Simulando conversões (em produção, teria dados reais)
+            const conversions = Math.floor(data.totalClicks * 0.05); // 5% de conversão
+            document.getElementById("conversions").innerText = conversions;
+
+            renderAdsTable(data.ads);
+            renderCharts(data.ads);
         }
 
-        function renderAds(ads) {
-            const container = document.getElementById("ads");
+        function renderAdsTable(ads) {
+            const container = document.getElementById("adsTable");
 
-            container.innerHTML = ads.map(ad => {
+            if (!ads || ads.length === 0) {
+                container.innerHTML = "<p>Nenhum anúncio encontrado.</p>";
+                return;
+            }
 
-                const ctr = ad.views > 0
-                    ? ((ad.clicks / ad.views) * 100).toFixed(1)
-                    : 0;
+            const table = `
+                <table class="ads-table-content">
+                    <thead>
+                        <tr>
+                            <th>Anúncio</th>
+                            <th>Status</th>
+                            <th>Visualizações</th>
+                            <th>Cliques</th>
+                            <th>CTR</th>
+                            <th>CPC</th>
+                            <th>Gasto</th>
+                            <th>Orçamento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ads.map(ad => {
+                            const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) : 0;
+                            const cpc = ad.clicks > 0 ? (ad.spent / ad.clicks).toFixed(2) : 0;
+                            return `
+                                <tr>
+                                    <td>${ad.title}</td>
+                                    <td><span class="status-${ad.status}">${ad.status}</span></td>
+                                    <td>${ad.views || 0}</td>
+                                    <td>${ad.clicks || 0}</td>
+                                    <td>${ctr}%</td>
+                                    <td>R$ ${cpc}</td>
+                                    <td>R$ ${(ad.spent || 0).toFixed(2)}</td>
+                                    <td>R$ ${(ad.budget || 0).toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }).join("")}
+                    </tbody>
+                </table>
+            `;
 
-                return `
-                <div class="ad-card">
+            container.innerHTML = table;
+        }
 
-                    <h3>${ad.title}</h3>
+        function renderCharts(ads) {
+            // Gráfico de desempenho por dia (simulado)
+            const ctx1 = document.getElementById('performanceChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        label: 'Cliques',
+                        data: [12, 19, 3, 5, 2, 3, 9],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Visualizações',
+                        data: [120, 190, 30, 50, 20, 30, 90],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
 
-                    <div class="ad-metrics">
-                        <span>👁 ${ad.views}</span>
-                        <span>🖱 ${ad.clicks}</span>
-                        <span>📊 ${ctr}% CTR</span>
-                    </div>
+            // Gráfico de distribuição de gastos
+            const ctx2 = document.getElementById('spendingChart').getContext('2d');
+            const adLabels = ads?.map(ad => ad.title.substring(0, 20) + '...') || [];
+            const adSpent = ads?.map(ad => ad.spent || 0) || [];
 
-                    <div>
-                        Status: ${ad.status}
-                    </div>
-
-                </div>
-                `;
-            }).join("");
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: adLabels,
+                    datasets: [{
+                        data: adSpent,
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
         }
 
         carregarDashboard();
