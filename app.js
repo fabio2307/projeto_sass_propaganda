@@ -750,33 +750,19 @@ async function pagar() {
     }
 }
 
-// ================= FORMATAÇÃO DE MOEDA =================
-function formatarMoeda(input) {
-    let value = input.value.replace(/\D/g, "");
+// ================= VALIDAÇÃO DE ORÇAMENTO =================
+function validateBudget(input) {
+    const value = parseMoney(input.value);
+    const minBudget = 5.00;
 
-    value = (value / 100).toFixed(2) + "";
-    value = value.replace(".", ",");
-
-    value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-    input.value = "R$ " + value;
-}
-
-// ================= MÁSCARA DE MOEDA =================
-const bidInput = document.getElementById("bid");
-
-if (bidInput) {
-    bidInput.addEventListener("input", (e) => {
-        let v = e.target.value.replace(/\D/g, "");
-
-        v = (Number(v) / 100).toFixed(2) + "";
-
-        v = v.replace(".", ",");
-
-        v = v.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-        e.target.value = "R$ " + v;
-    });
+    if (value > 0 && value < minBudget) {
+        showToast(`Orçamento mínimo: R$ ${minBudget.toFixed(2).replace(".", ",")}`, "warning");
+        input.style.borderColor = "#f59e0b";
+        return false;
+    } else {
+        input.style.borderColor = "#1e293b";
+        return true;
+    }
 }
 
 // ================= PARSE DE MOEDA =================
@@ -795,19 +781,6 @@ function formatMoney(value) {
         style: "currency",
         currency: "BRL"
     });
-}
-
-// ================= FORMATAÇÃO DE MOEDA SIMPLES =================
-function formatMoneyInput(input) {
-    let value = input.value.replace(/\D/g, "");
-
-    if (value === "") {
-        input.value = "";
-        return;
-    }
-
-    value = (Number(value) / 100).toFixed(2);
-    input.value = "R$ " + value.replace(".", ",");
 }
 
 // ================= INICIALIZAÇÃO =================
