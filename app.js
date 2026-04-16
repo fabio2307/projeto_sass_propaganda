@@ -548,26 +548,48 @@ async function criarAd() {
 
         console.log("ENVIANDO:", { title, description, link, bid, budget }); // 🔥 DEBUG
 
-        if (!title || !link || isNaN(bid) || bid <= 0) {
-            throw new Error("Preencha os campos corretamente");
+        // Validações específicas e detalhadas
+        if (!title) {
+            throw new Error("Título é obrigatório");
+        }
+        if (title.length < 3) {
+            throw new Error("Título deve ter pelo menos 3 caracteres");
+        }
+        if (title.length > 100) {
+            throw new Error("Título deve ter no máximo 100 caracteres");
         }
 
-        if (bid < 1) {
-            throw new Error("Valor mínimo do lance é R$ 1,00");
+        if (!description) {
+            throw new Error("Descrição é obrigatória");
+        }
+        if (description.length < 10) {
+            throw new Error("Descrição deve ter pelo menos 10 caracteres");
+        }
+        if (description.length > 500) {
+            throw new Error("Descrição deve ter no máximo 500 caracteres");
         }
 
-        if (isNaN(budget) || budget <= 0) {
-            throw new Error("Orçamento inválido");
+        if (!link) {
+            throw new Error("Link é obrigatório");
         }
-
-        if (!description || description.length < 10) {
-            throw new Error("Descrição muito curta");
-        }
-
         try {
             new URL(link);
         } catch {
-            throw new Error("Link inválido");
+            throw new Error("Link deve ser uma URL válida (ex: https://exemplo.com)");
+        }
+
+        if (isNaN(bid) || bid <= 0) {
+            throw new Error("Lance deve ser um valor válido maior que zero");
+        }
+        if (bid < 1) {
+            throw new Error("Lance mínimo é R$ 1,00");
+        }
+
+        if (isNaN(budget) || budget <= 0) {
+            throw new Error("Orçamento deve ser um valor válido maior que zero");
+        }
+        if (budget < 5) {
+            throw new Error("Orçamento mínimo é R$ 5,00");
         }
 
         const res = await fetch(`${API}?action=createAd`, {
@@ -587,7 +609,7 @@ async function criarAd() {
             throw new Error(data.error || "Erro ao criar anúncio");
         }
 
-        showToast("Anúncio criado com sucesso 🚀", "success");
+        showToast("Anúncio criado com sucesso! 🎉", "success");
 
         document.getElementById("title").value = "";
         document.getElementById("description").value = "";
@@ -604,20 +626,53 @@ async function criarAd() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = "Criar anúncio";
+            btn.innerHTML = '<span class="btn-icon">🚀</span> Criar Anúncio';
         }
     }
 }
 
-// ================= VALIDAÇÃO DE ORÇAMENTO =================
-function validateBudget(input) {
-    const value = parseMoney(input.value);
+// ================= VALIDAÇÃO EM TEMPO REAL =================
+function setupRealTimeValidation() {
+    const titleInput = document.getElementById("title");
+    const descriptionInput = document.getElementById("description");
+    const linkInput = document.getElementById("link");
+    const bidInput = document.getElementById("bid");
+    const budgetInput = document.getElementById("budget");
 
-    if (value < 5) {
-        showToast("Orçamento mínimo é R$ 5,00", "error");
-        input.value = "";
+    if (titleInput) {
+        titleInput.addEventListener("input", function() {
+            const length = this.value.length;
+            const counter = this.parentElement.querySelector("small");
+            if (counter) {
+                counter.textContent = `${length}/100 caracteres`;
+                counter.style.color = length > 100 ? "#ef4444" : length < 3 ? "#f59e0b" : "#10b981";
+            }
+        });
+    }
+
+    if (descriptionInput) {
+        descriptionInput.addEventListener("input", function() {
+            const length = this.value.length;
+            const counter = this.parentElement.querySelector("small");
+            if (counter) {
+                counter.textContent = `${length}/500 caracteres`;
+                counter.style.color = length > 500 ? "#ef4444" : length < 10 ? "#f59e0b" : "#10b981";
+            }
+        });
+    }
+
+    if (linkInput) {
+        linkInput.addEventListener("input", function() {
+            const isValid = this.value.startsWith("https://") || this.value.startsWith("http://");
+            this.style.borderColor = isValid ? "#10b981" : this.value ? "#f59e0b" : "#1e293b";
+        });
     }
 }
+
+// Chamar quando o DOM estiver pronto
+document.addEventListener("DOMContentLoaded", function() {
+    setupRealTimeValidation();
+});
 
 let loadingAds = false;
 

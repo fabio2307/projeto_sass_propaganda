@@ -95,26 +95,56 @@
 
             <!-- CRIAR ANÚNCIO -->
             <div class="create-ad">
-                <h3>Cadastrar Produto / Anúncio</h3>
-
-                <input id="title" placeholder="Título do produto">
-                <input id="description" placeholder="Descrição">
-                <input id="link" placeholder="Link do produto">
-                <input id="bid" type="text" placeholder="R$ 0,00">
-
-                <div class="input-group">
-                    <label for="budget">Orçamento total</label>
-
-                    <div class="money-input">
-                        <span>R$</span>
-                        <input id="budget" type="text" placeholder="0,00" oninput="formatMoneyInput(this)"
-                            onblur="validateBudget(this)">
-                    </div>
-
-                    <small>Valor total que será usado na campanha</small>
+                <div class="create-ad-header">
+                    <h3>🚀 Criar Novo Anúncio</h3>
+                    <p>Configure sua campanha de anúncios</p>
                 </div>
 
-                <button onclick="if(window.criarAd) window.criarAd(); else alert('Carregando...')">Criar anúncio</button>
+                <div class="form-group">
+                    <label for="title">Título do Produto *</label>
+                    <input id="title" type="text" placeholder="Ex: Smartphone Galaxy S24 Ultra" maxlength="100">
+                    <small>0/100 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Descrição *</label>
+                    <textarea id="description" placeholder="Descreva os benefícios e características do produto..." rows="3" maxlength="500"></textarea>
+                    <small>0/500 caracteres</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="link">Link do Produto *</label>
+                    <input id="link" type="url" placeholder="https://exemplo.com/produto">
+                    <small>URL completa do produto (deve começar com https://)</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bid">Lance por Clique (R$) *</label>
+                        <input id="bid" type="text" placeholder="R$ 0,00" oninput="formatMoneyInput(this)">
+                        <small>Valor mínimo: R$ 1,00</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="budget">Orçamento Total (R$) *</label>
+                        <input id="budget" type="text" placeholder="R$ 0,00" oninput="formatMoneyInput(this)" onblur="validateBudget(this)">
+                        <small>Mínimo R$ 5,00</small>
+                    </div>
+                </div>
+
+                <div class="form-info">
+                    <div class="info-item">
+                        <span class="info-icon">💡</span>
+                        <div>
+                            <strong>Dica:</strong> Lance competitivo aumenta visibilidade, mas orçamento controla gastos totais.
+                        </div>
+                    </div>
+                </div>
+
+                <button class="create-ad-btn" onclick="if(window.criarAd) window.criarAd(); else alert('Carregando...')">
+                    <span class="btn-icon">🚀</span>
+                    Criar Anúncio
+                </button>
             </div>
 
             <!-- LISTA -->
