@@ -246,15 +246,6 @@ async function login() {
             btn.disabled = true;
             btn.innerText = "Entrando...";
         }
-            throw new Error("Erro de interface. Recarregue a página.");
-        }
-
-        const email = emailInput.value;
-        const password = passwordInput.value;
-
-        if (!email || !password) {
-            throw new Error("Preencha email e senha");
-        }
 
         const res = await fetch(`${API}?action=login`, {
             method: "POST",
@@ -764,13 +755,6 @@ function formatMoneyInput(input) {
     input.value = "R$ " + value.replace(".", ",");
 }
 
-    value = value.replace(".", ",");
-
-    value = value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-    input.value = value;
-}
-
 // ================= INICIALIZAÇÃO =================
 async function init() {
     const token = getToken();
@@ -883,4 +867,6 @@ window.carregarAds = carregarAds;
 window.showRegister = showRegister;
 window.showLogin = showLogin;
 window.criarAd = criarAd;
+window.resendVerification = resendVerification;
+window.carregarTransacoes = carregarTransacoes;
 document.addEventListener("DOMContentLoaded", init);

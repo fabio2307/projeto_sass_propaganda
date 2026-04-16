@@ -20,10 +20,10 @@
 
         <p id="resendBox" class="resend hidden">
             Não recebeu o email?
-            <span id="resendBtn" onclick="resendVerification()">Reenviar verificação</span>
+            <span id="resendBtn" onclick="if(window.resendVerification) window.resendVerification(); else alert('Carregando...')">Reenviar verificação</span>
         </p>
 
-        <p onclick="showRegister()" class="link">Criar conta</p>
+        <p onclick="if(window.showRegister) window.showRegister(); else alert('Carregando...')" class="link">Criar conta</p>
     </div>
     <div class="center-box hidden" id="registerBox">
         <h2>Cadastro</h2>
@@ -44,7 +44,7 @@
 
         </form>
 
-        <p onclick="showLogin()" class="link">Já tenho conta</p>
+        <p onclick="if(window.showLogin) window.showLogin(); else alert('Carregando...')" class="link">Já tenho conta</p>
     </div>
 
     <!-- DASHBOARD -->
@@ -65,7 +65,7 @@
             <h3>💰 Saldo: R$ <span id="saldo">0</span></h3>
 
             <input type="text" id="valor" placeholder="R$ 0,00">
-            <button onclick="pagar()">Adicionar saldo</button>
+            <button onclick="if(window.pagar) window.pagar(); else alert('Carregando...')">Adicionar saldo</button>
         </div>
 
         <!-- STATS -->
@@ -114,7 +114,7 @@
                     <small>Valor total que será usado na campanha</small>
                 </div>
 
-                <button onclick="criarAd()">Criar anúncio</button>
+                <button onclick="if(window.criarAd) window.criarAd(); else alert('Carregando...')">Criar anúncio</button>
             </div>
 
             <!-- LISTA -->
@@ -123,7 +123,7 @@
             <!-- TRANSAÇÕES -->
             <div class="transactions-section">
                 <h3>Histórico de Transações</h3>
-                <button onclick="carregarTransacoes()">Carregar Transações</button>
+                <button onclick="if(window.carregarTransacoes) window.carregarTransacoes(); else alert('Carregando...')">Carregar Transações</button>
                 <div id="transactions"></div>
             </div>
 
