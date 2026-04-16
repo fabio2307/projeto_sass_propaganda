@@ -109,6 +109,30 @@ function showLogin() {
 
 // ================= REGISTER =================
 async function register() {
+    const name = document.getElementById("registerName").value.trim();
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+
+    // Validação frontend
+    if (!name || name.length < 2) {
+        showToast("Nome deve ter pelo menos 2 caracteres", "error");
+        return;
+    }
+    if (!email || !email.includes("@")) {
+        showToast("Email inválido", "error");
+        return;
+    }
+    if (!password || password.length < 8) {
+        showToast("Senha deve ter pelo menos 8 caracteres", "error");
+        return;
+    }
+
+    const btn = document.querySelector("#registerBox button");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Criando conta...";
+    }
+
     try {
         const res = await fetch(`${API}?action=register`, {
             method: "POST",
@@ -133,6 +157,11 @@ async function register() {
     } catch (err) {
         console.error(err);
         showToast("Erro: " + err.message, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Criar conta";
+        }
     }
 }
 
@@ -196,6 +225,19 @@ function limparCamposCadastro() {
 
 // ================= LOGIN =================
 async function login() {
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+
+    // Validação frontend
+    if (!email || !email.includes("@")) {
+        showToast("Email inválido", "error");
+        return;
+    }
+    if (!password) {
+        showToast("Digite sua senha", "error");
+        return;
+    }
+
     const btn = document.getElementById("btnLogin");
 
     try {
@@ -204,11 +246,6 @@ async function login() {
             btn.disabled = true;
             btn.innerText = "Entrando...";
         }
-
-        const emailInput = document.getElementById("loginEmail");
-        const passwordInput = document.getElementById("loginPassword");
-
-        if (!emailInput || !passwordInput) {
             throw new Error("Erro de interface. Recarregue a página.");
         }
 
@@ -310,24 +347,62 @@ async function carregarSaldo() {
 
         const data = await safeJson(res);
 
-        document.getElementById("saldo").innerText = formatCurrency(data.balance || 0);
+        document.getElementById("saldo").innerText = formatMoney(data.balance || 0);
 
     } catch (err) {
         showToast(err.message, "error");
     }
 }
 
-// ================= ESCAPE HTML =================
-function escapeHTML(str) {
-    if (!str) return "";
+// ================= CARREGAR TRANSAÇÕES =================
+async function carregarTransacoes() {
+    try {
+        const res = await fetch(`${API}?action=transactions`, {
+            headers: {
+                "Authorization": `Bearer ${getToken()}`
+            }
+        });
 
-    return str.replace(/[&<>"']/g, (m) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-    }[m]));
+        const transactions = await res.json();
+
+        renderTransactions(transactions);
+
+    } catch (err) {
+        showToast(err.message, "error");
+    }
+}
+
+// ================= RENDER TRANSAÇÕES =================
+function renderTransactions(transactions) {
+    const container = document.getElementById("transactions");
+
+    if (!transactions || transactions.length === 0) {
+        container.innerHTML = "<p>Nenhuma transação encontrada.</p>";
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="transactions-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${transactions.map(t => `
+                    <tr>
+                        <td>${new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
+                        <td>${t.type || 'Transação'}</td>
+                        <td class="${t.amount >= 0 ? 'positive' : 'negative'}">${formatMoney(t.amount)}</td>
+                        <td>${t.description || ''}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
 }
 
 // ================= API =================
@@ -373,14 +448,19 @@ function renderAds(ads) {
             </a>
 
             <div class="ad-metrics">
-                <span>👁 ${ad.views}</span>
-                <span>🖱 ${ad.clicks}</span>
-                <span>📊 ${ctr}%</span>
+                <span>👁 ${ad.views || 0} visualizações</span>
+                <span>🖱 ${ad.clicks || 0} cliques</span>
+                <span>📊 ${ctr}% CTR</span>
+                <span>💸 Gasto: ${formatMoney(ad.spent || 0)}</span>
+            </div>
+
+            <div class="ad-status">
+                <span class="status-${ad.status || 'unknown'}">${ad.status || 'Desconhecido'}</span>
             </div>
 
             <div class="ad-extra">
-                <span>💰 Lance: ${formatCurrency(ad.bid)}</span>
-                <span>⏳ Restante: ${formatCurrency(ad.remaining || 0)}</span>
+                <span>💰 Lance: ${formatMoney(ad.bid)}</span>
+                <span>⏳ Restante: ${formatMoney(ad.remaining || 0)}</span>
                 <span>📌 Status: ${escapeHTML(ad.status || "active")}</span>
             </div>
 
@@ -462,6 +542,12 @@ function atualizarStats(ads) {
 
 // ================= CRIAR AD =================
 async function criarAd() {
+    const btn = document.querySelector("#createAdForm button");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Criando anúncio...";
+    }
+
     try {
         const title = document.getElementById("title").value;
         const description = document.getElementById("description").value;
@@ -519,10 +605,16 @@ async function criarAd() {
         document.getElementById("title").focus();
 
         await carregarAds();
+        await carregarSaldo(); // Atualizar saldo em tempo real
 
     } catch (err) {
         console.error("ERRO:", err);
         showToast(err.message, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Criar anúncio";
+        }
     }
 }
 
@@ -571,6 +663,13 @@ async function carregarAds() {
         loadingAds = false;
     }
 }
+
+// ================= AUTO REFRESH ADS =================
+setInterval(() => {
+    if (getToken()) {
+        carregarAds();
+    }
+}, 30000); // 30 segundos
 
 // ================= PAGAMENTO =================
 async function pagar() {
@@ -645,7 +744,7 @@ function parseMoney(value) {
     );
 }
 
-function formatCurrency(value) {
+function formatMoney(value) {
     return Number(value || 0).toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL"
@@ -656,7 +755,14 @@ function formatCurrency(value) {
 function formatMoneyInput(input) {
     let value = input.value.replace(/\D/g, "");
 
-    value = (value / 100).toFixed(2) + "";
+    if (value === "") {
+        input.value = "";
+        return;
+    }
+
+    value = (Number(value) / 100).toFixed(2);
+    input.value = "R$ " + value.replace(".", ",");
+}
 
     value = value.replace(".", ",");
 
@@ -684,6 +790,10 @@ async function init() {
     // mostrar dashboard (se existir)
     const dashboard = document.getElementById("dashboard");
     if (dashboard) dashboard.classList.remove("hidden");
+
+    // mostrar seções protegidas
+    const createAd = document.querySelector(".create-ad");
+    if (createAd) createAd.style.display = "block";
 
     try {
         await carregarSaldo();

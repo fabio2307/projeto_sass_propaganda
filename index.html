@@ -86,6 +86,11 @@
             </div>
         </div>
 
+        <!-- FILTRO DE ANÚNCIOS -->
+        <div class="filter-section">
+            <input id="searchAds" type="text" placeholder="Buscar anúncios..." oninput="filtrarAds()">
+        </div>
+
         <div class="dashboard-content">
 
             <!-- CRIAR ANÚNCIO -->
@@ -114,6 +119,13 @@
 
             <!-- LISTA -->
             <div class="ads" id="ads"></div>
+
+            <!-- TRANSAÇÕES -->
+            <div class="transactions-section">
+                <h3>Histórico de Transações</h3>
+                <button onclick="carregarTransacoes()">Carregar Transações</button>
+                <div id="transactions"></div>
+            </div>
 
         </div>
 

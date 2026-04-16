@@ -73,6 +73,13 @@
     <script>
         const API = "/api";
 
+        function formatMoney(value) {
+            return Number(value || 0).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL"
+            });
+        }
+
         async function carregarDashboard() {
 
             const token = localStorage.getItem("token");
@@ -92,23 +99,14 @@
 
             // Métricas básicas
             document.getElementById("balance").innerText =
-                data.balance.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                });
+                formatMoney(data.balance);
 
             document.getElementById("spent").innerText =
-                data.totalSpent.toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                });
+                formatMoney(data.totalSpent);
 
             document.getElementById("clicks").innerText = data.totalClicks || 0;
             document.getElementById("cpc").innerText =
-                (data.cpc || 0).toLocaleString("pt-BR", {
-                    style: "currency",
-                    currency: "BRL"
-                });
+                formatMoney(data.cpc || 0);
 
             // Novas métricas
             const totalViews = data.ads?.reduce((acc, ad) => acc + (ad.views || 0), 0) || 0;

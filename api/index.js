@@ -1103,6 +1103,25 @@ export default async function handler(req, res) {
             return res.json(result);
         }
 
+        // ================= TRANSACTIONS =================
+        if (action === "transactions") {
+
+            const user = await getUserFromToken(extractToken(req));
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { data } = await supabase
+                .from("transactions")
+                .select("*")
+                .eq("user_id", user.id)
+                .order("created_at", { ascending: false })
+                .limit(50);
+
+            return res.json(data || []);
+        }
+
         return res.status(400).json({ error: "Ação inválida" });
 
     } catch (err) {
