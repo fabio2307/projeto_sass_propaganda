@@ -148,14 +148,16 @@ body {
 /* FORM */
 .create-ad {
   background: #020617;
-  padding: 30px;
+  padding: 32px;
   border-radius: 16px;
   border: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   display: none; /* Escondido por padrão */
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .create-ad-header {
@@ -188,26 +190,64 @@ body {
 
 .form-group input,
 .form-group textarea {
-  padding: 12px 16px;
+  padding: 14px 18px;
   border: 2px solid #1e293b;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #0f172a;
   color: #e2e8f0;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
+  font-size: 15px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
 }
 
 .form-group small {
   color: #64748b;
   font-size: 12px;
   margin-top: 4px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.form-grid .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-grid .form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-grid .form-group:not(.full-width) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Para telas maiores, os inputs de lance e orçamento ficam lado a lado */
+@media (min-width: 600px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  .form-grid .form-group:not(.full-width) {
+    width: 100%;
+  }
 }
 
 .form-row {
@@ -394,22 +434,22 @@ body {
 /* ================= RESPONSIVIDADE ================= */
 @media (max-width: 768px) {
   .create-ad {
-    padding: 20px;
-    gap: 20px;
+    padding: 24px;
+    gap: 24px;
+    margin: 0 16px;
   }
 
   .create-ad-header h3 {
-    font-size: 20px;
+    font-size: 22px;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .form-grid {
+    gap: 20px;
   }
 
   .form-group input,
   .form-group textarea {
-    padding: 14px 16px;
+    padding: 16px 18px;
     font-size: 16px; /* Evita zoom no iOS */
   }
 
@@ -430,20 +470,30 @@ body {
 
 @media (max-width: 480px) {
   .create-ad {
-    padding: 16px;
+    padding: 20px;
     margin: 0 8px;
+    gap: 20px;
   }
 
   .create-ad-header h3 {
-    font-size: 18px;
+    font-size: 20px;
+  }
+
+  .form-grid {
+    gap: 18px;
   }
 
   .form-group label {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .form-group small {
-    font-size: 11px;
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    padding: 14px 16px;
   }
 }
 
