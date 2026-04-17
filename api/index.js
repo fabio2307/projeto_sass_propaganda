@@ -99,6 +99,9 @@ export default async function handler(req, res) {
             }
         }
 
+        const action = String(req.query?.action || body?.action || "").trim();
+        const supabase = getSupabase();
+
         // ✅ IP corrigido
         const ip = (req.headers["x-forwarded-for"] || "").split(",")[0] || "unknown";
 
