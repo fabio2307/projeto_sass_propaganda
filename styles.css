@@ -160,23 +160,16 @@ textarea {
   }
 }
 
-  table {
-    font-size: 12px;
-  }
-
-  th, td {
-    padding: 8px 4px;
-  }
-
-  .btn {
-    width: 100%;
-    padding: 12px;
-  }
+html {
+  min-height: 100%;
+  background: #020617;
 }
 
 body {
   font-family: Arial, sans-serif;
+  min-height: 100%;
   background: linear-gradient(135deg, #020617, #0f172a);
+  background-attachment: fixed;
   color: #fff;
   margin: 0;
   padding: 20px;
