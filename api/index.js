@@ -13,15 +13,19 @@ import {
     checkRateLimitDB
 } from '../lib/adsService.js';
 import {
-    validateCredentials,
-    hashPassword,
-    verifyPassword,
-    generateToken,
-    getUserFromToken
-} from '../lib/authService.js';
+    createAd,
+    getUserAds,
+    toggleAd
+} from '../lib/ads.js';
+import {
+    registerUser,
+    loginUser,
+    getUserFromToken,
+    getUserData
+} from '../lib/auth.js';
 import {
     createStripeCheckout
-} from '../lib/paymentsService.js';
+} from '../lib/payments.js';
 import {
     auditLog,
     getCache,
@@ -95,26 +99,11 @@ export default async function handler(req, res) {
             }
         }
 
-        // ✅ IP corrigido (Vercel manda lista)
-
-        let supabase;
-        try {
-            supabase = getSupabase();
-        } catch (e) {
-            console.error("❌ Erro ao criar cliente Supabase:", e.message);
-            return res.status(500).json({
-                error: "Erro ao conectar com database",
-                detail: e.message
-            });
-        }
-
-        const { action } = req.query;
-
         // ✅ IP corrigido
         const ip = (req.headers["x-forwarded-for"] || "").split(",")[0] || "unknown";
 
         // ✅ rate limit só em ações específicas
-        if (action === "click" || action === "createAd") {
+        if (action === "click" || action === "createAd" || action === "login" || action === "register") {
             if (!checkRateLimit(ip)) {
                 return res.status(429).json({ error: "Muitos cliques" });
             }
@@ -157,60 +146,24 @@ export default async function handler(req, res) {
 
             const { name, birthDate, email, password } = body;
 
-            // 🔥 validação rigorosa
-            if (!validateInput(name, 'name') || !validateInput(email, 'email') || !validateInput(password, 'password')) {
-                return res.status(400).json({ error: "Dados inválidos" });
+            const result = await registerUser(supabase, { name, birthDate, email, password });
+
+            if (!result.success) {
+                return res.status(400).json({ error: result.error });
             }
 
-            auditLog('REGISTER_ATTEMPT', null, { email });
-
-            const { data: existingUser } = await supabase
-                .from("users")
-                .select("id")
-                .eq("email", email)
-                .maybeSingle();
-
-            if (existingUser) {
-                auditLog('REGISTER_FAILED', null, { email, reason: 'email_exists' });
-                return res.status(400).json({ error: "Email já cadastrado" });
-            }
-
-            const hash = await bcrypt.hash(password, 10);
-            const token = crypto.randomUUID();
-
-            // 🔥 FALTAVA ISSO
-            const verifyToken = crypto.randomUUID();
-
-            const { error } = await supabase
-                .from("users")
-                .insert([{
-                    name,
-                    birth_date: birthDate || null,
-                    email,
-                    password: hash,
-                    token,
-                    balance: 0,
-                    plan: "free",
-                    verify_token: verifyToken,
-                    verified: false
-                }]);
-
-            if (error) {
-                console.error("ERRO SUPABASE:", error);
-                return res.status(400).json({ error: error.message });
-            }
-
+            // 📧 envia email de verificação
             if (!resend) {
                 return res.status(500).json({ error: "Resend não configurado" });
             }
 
             await resend.emails.send({
-                from: 'onboarding@resend.dev', // 🔥 use esse pra teste
+                from: 'onboarding@resend.dev',
                 to: email,
                 subject: 'Verifique sua conta',
                 html: `
                   <div style="font-family: Arial, sans-serif; background:#0f172a; padding:40px; text-align:center; color:#e2e8f0;">
-    
+
     <div style="max-width:500px; margin:auto; background:#020617; padding:30px; border-radius:12px; border:1px solid #1e293b;">
         
         <h2 style="margin-bottom:10px;">🚀 Confirme seu cadastro</h2>
@@ -219,7 +172,7 @@ export default async function handler(req, res) {
             Para ativar sua conta, clique no botão abaixo:
         </p>
 
-        <a href="${baseUrl}/api?action=verify&token=${verifyToken}"
+        <a href="${baseUrl}/api?action=verify&token=${result.verifyToken}"
            style="
                 display:inline-block;
                 margin-top:20px;
@@ -238,7 +191,7 @@ export default async function handler(req, res) {
         </p>
 
         <p style="word-break:break-all; font-size:12px; color:#38bdf8;">
-            ${baseUrl}/api?action=verify&token=${verifyToken}
+            ${baseUrl}/api?action=verify&token=${result.verifyToken}
         </p>
 
         <hr style="margin:25px 0; border-color:#1e293b;">
@@ -364,44 +317,13 @@ export default async function handler(req, res) {
 
             const { email, password } = body;
 
-            const { data: user } = await supabase
-                .from("users")
-                .select("*")
-                .eq("email", email)
-                .maybeSingle();
+            const result = await loginUser(supabase, { email, password });
 
-            if (!user) {
-                return res.status(401).json({ error: "Login inválido" });
+            if (!result.success) {
+                return res.status(401).json({ error: result.error });
             }
 
-            const match = await bcrypt.compare(password, user.password);
-
-            if (!match) {
-                return res.status(401).json({ error: "Login inválido" });
-            }
-
-            if (!user.verified) {
-                return res.status(401).json({
-                    error: "Verifique seu email antes de acessar"
-                });
-            }
-
-            // � gera JWT expirável
-            const newToken = jwt.sign(
-                { sub: user.id },
-                process.env.JWT_SECRET,
-                { expiresIn: "24h" }
-            );
-
-            await supabase
-                .from("users")
-                .update({ token: newToken })
-                .eq("id", user.id);
-
-            return res.json({
-                token: newToken,
-                user: { id: user.id }
-            });
+            return res.json(result);
         }
 
         // ================= REENVIAR VERIFICAÇÃO (API) =================
@@ -506,10 +428,9 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            return res.json({
-                balance: user.balance,
-                plan: user.plan
-            });
+            const userData = await getUserData(supabase, user.id);
+
+            return res.json(userData);
         }
 
         // ================= CREATE AD =================
@@ -521,145 +442,12 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            // 🔥 verificar limite de anúncios por plano
-            const maxAds = user.plan === 'PRO' ? 100 : 5;
-            const { count } = await supabase
-                .from("ads")
-                .select('*', { count: 'exact', head: true })
-                .eq("user_id", user.id);
-            if (count >= maxAds) {
-                return res.status(400).json({ error: `Limite de ${maxAds} anúncios atingido para seu plano` });
-            }
-
             const { title, description, link, bid, budget } = body;
 
-            // 🔥 normaliza bid
-            const bidNumber = Number(
-                String(bid).replace(/[^\d.-]/g, "").replace(",", ".")
-            );
+            const result = await createAd(supabase, user, { title, description, link, bid, budget });
 
-            // 🔥 normaliza budget
-            const budgetNumber = Number(
-                String(budget).replace(/[^\d.-]/g, "").replace(",", ".")
-            );
-
-            // 🔥 validações
-            if (!title || title.length < 3 || title.length > 255) {
-                return res.status(400).json({ error: "Título deve ter entre 3 e 255 caracteres" });
-            }
-            if (!description || description.length < 10 || description.length > 255) {
-                return res.status(400).json({ error: "Descrição deve ter entre 10 e 255 caracteres" });
-            }
-            if (!link) {
-                return res.status(400).json({ error: "Link é obrigatório" });
-            }
-            if (isNaN(bidNumber) || bidNumber < 1) {
-                return res.status(400).json({ error: "Bid deve ser pelo menos 1" });
-            }
-            if (isNaN(budgetNumber) || budgetNumber < bidNumber) {
-                return res.status(400).json({ error: "Orçamento deve ser pelo menos igual ao bid" });
-            }
-
-            // 🔥 valida saldo para orçamento com consistência forte
-            // Primeiro, recarrega o saldo atual para evitar race conditions
-            const { data: currentUser } = await supabase
-                .from("users")
-                .select("balance")
-                .eq("id", user.id)
-                .single();
-
-            if (!currentUser || (currentUser.balance || 0) < budgetNumber) {
-                auditLog('CREATE_AD_FAILED', user.id, { reason: 'insufficient_balance', budget: budgetNumber });
-                return res.status(400).json({
-                    error: "Saldo insuficiente para orçamento"
-                });
-            }
-
-            // 🔥 reserva orçamento com transação simulada (para consistência)
-            const { error: updateError } = await supabase
-                .from("users")
-                .update({ balance: (currentUser.balance || 0) - budgetNumber })
-                .eq("id", user.id);
-
-            if (updateError) {
-                auditLog('CREATE_AD_FAILED', user.id, { reason: 'balance_update_error', error: updateError.message });
-                return res.status(400).json({
-                    error: "Não foi possível reservar o saldo",
-                    details: updateError.message
-                });
-            }
-
-            auditLog('BALANCE_RESERVED', user.id, { amount: budgetNumber, new_balance: (currentUser.balance || 0) - budgetNumber });
-
-            // 🔥 sanitização SEGURA (sem quebrar URL)
-            function sanitizeText(text) {
-                return String(text)
-                    .trim()
-                    .replace(/[<>]/g, "") // remove tags básicas
-                    .slice(0, 255); // evita overflow
-            }
-
-            // 🔥 reset diário para controle de gastos (importante para novos anúncios)
-            function resetDailyIfNeeded(ad) {
-                const today = new Date().toISOString().split("T")[0];
-
-                if (ad.last_reset !== today) {
-                    ad.daily_spent = 0;
-                    ad.last_reset = today;
-                }
-
-                return ad;
-            }
-
-            const safeTitle = sanitizeText(title);
-            const safeDescription = sanitizeText(description);
-
-            // 🔥 valida URL corretamente
-            let safeLink;
-            try {
-                const url = new URL(link);
-                safeLink = url.href;
-            } catch {
-                return res.status(400).json({ error: "Link inválido" });
-            }
-
-            console.log("CREATE AD:", {
-                user: user.id,
-                bid: bidNumber,
-                budget: budgetNumber
-            });
-
-            const { error } = await supabase
-                .from("ads")
-                .insert([{
-                    user_id: user.id,
-                    title: safeTitle,
-                    description: safeDescription,
-                    link: safeLink,
-                    bid: bidNumber,
-                    budget: budgetNumber,
-                    reserved_budget: budgetNumber,
-                    spent: 0,
-                    remaining: budgetNumber,
-                    daily_budget: budgetNumber / 30,
-                    daily_spent: 0,
-                    clicks: 0,
-                    views: 0,
-                    status: "active",
-                    is_featured: false
-                }]);
-
-            if (error) {
-                // 🔥 rollback consistente
-                await supabase
-                    .from("users")
-                    .update({ balance: currentUser.balance || 0 })
-                    .eq("id", user.id);
-                auditLog('CREATE_AD_FAILED', user.id, { reason: 'ad_insert_error', error: error.message });
-            }
-
-            if (!error) {
-                auditLog('AD_CREATED', user.id, { ad_id: data[0].id, budget: budgetNumber });
+            if (!result.success) {
+                return res.status(400).json({ error: result.error });
             }
 
             return res.json({ success: true });
@@ -674,11 +462,9 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            const { data } = await supabase
-                .from("ads")
-                .select("*")
-                .eq("user_id", user.id)
-                .order("created_at", { ascending: false });
+            const { status, search } = req.query;
+
+            const data = await getUserAds(supabase, user.id, { status, search });
 
             return res.json(data);
         }
@@ -776,34 +562,28 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: "Anúncio inválido" });
             }
 
-            // valida orçamento do anúncio
+            // 🔥 valida orçamento do anúncio ATOMICAMENTE
             const cost = Number(ad.bid || 0);
 
-            if ((updatedAd.remaining || 0) < cost) {
-                await supabase
-                    .from("ads")
-                    .update({ status: "inactive" })
-                    .eq("id", adId);
-
-                return res.status(400).json({ error: "Orçamento do anúncio esgotado" });
-            }
-
-            const newRemaining = (updatedAd.remaining || 0) - cost;
-            const newSpent = (updatedAd.spent || 0) + cost;
-            const newStatus = newRemaining <= 0 ? "inactive" : "active";
-
-            // 📊 atualiza anúncio com orçamento reservado
-            await supabase
+            // Atualiza remaining apenas se houver saldo suficiente
+            const { data: adUpdate, error: adError } = await supabase
                 .from("ads")
                 .update({
-                    clicks: (ad.clicks || 0) + 1,
-                    spent: newSpent,
-                    remaining: newRemaining,
-                    daily_spent: (updatedAd.daily_spent || 0) + cost,
+                    remaining: supabase.raw('remaining - ?', [cost]),
+                    clicks: supabase.raw('clicks + 1'),
+                    spent: supabase.raw('spent + ?', [cost]),
+                    daily_spent: supabase.raw('daily_spent + ?', [cost]),
                     last_reset: updatedAd.last_reset,
-                    status: newStatus
+                    status: supabase.raw('CASE WHEN remaining - ? <= 0 THEN \'inactive\' ELSE \'active\' END', [cost])
                 })
-                .eq("id", adId);
+                .eq("id", adId)
+                .gte("remaining", cost)
+                .gte("daily_budget", supabase.raw('daily_spent + ?', [cost]))
+                .select("remaining, status");
+
+            if (adError || !adUpdate || adUpdate.length === 0) {
+                return res.status(400).json({ error: "Orçamento do anúncio esgotado ou limite diário atingido" });
+            }
 
             // 🧾 registra transação financeira de clique
             await supabase
@@ -873,10 +653,6 @@ export default async function handler(req, res) {
         // ================= CHECKOUT =================
         if (action === "createCheckout") {
 
-            if (!stripe) {
-                return res.status(500).json({ error: "Stripe não configurado" });
-            }
-
             const user = await getUserFromToken(extractToken(req));
 
             if (!user) {
@@ -885,51 +661,9 @@ export default async function handler(req, res) {
 
             const { amount } = body;
 
-            if (!amount || amount <= 0) {
-                return res.status(400).json({ error: "Valor inválido" });
-            }
+            const result = await createStripeCheckout(user.id, amount);
 
-            try {
-
-                const baseUrl = req.headers.origin || "https://projeto-sass-propaganda.vercel.app";
-
-                const session = await stripe.checkout.sessions.create({
-                    payment_method_types: ["card", "boleto"],
-                    mode: "payment",
-
-                    // 🔥 IMPORTANTE PRO WEBHOOK
-                    client_reference_id: user.id, // extra para rastreio
-
-                    metadata: {
-                        user_id: user.id,
-                        amount: amount.toString()
-                    },
-
-                    line_items: [{
-                        price_data: {
-                            currency: "brl",
-                            product_data: {
-                                name: "Adicionar saldo"
-                            },
-                            unit_amount: Math.round(amount * 100)
-                        },
-                        quantity: 1
-                    }],
-
-                    success_url: `${baseUrl}/?success=true`,
-                    cancel_url: `${baseUrl}/?cancel=true`
-                });
-
-                return res.json({ url: session.url });
-
-            } catch (err) {
-                console.error("🔥 ERRO STRIPE:", err);
-
-                return res.status(500).json({
-                    error: "Erro ao criar pagamento",
-                    detalhe: err.message
-                });
-            }
+            return res.json({ url: result.url });
         }
 
         // ================= TOGGLE (CORRIGIDO) =================
@@ -941,55 +675,13 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
-            const { id, status } = body;
+            const { id, status, featured } = body;
 
-            if (!id || !["active", "paused", "inactive"].includes(status)) {
-                return res.status(400).json({ error: "Dados inválidos" });
+            const result = await toggleAd(supabase, user, { id, status, featured });
+
+            if (!result.success) {
+                return res.status(400).json({ error: result.error });
             }
-
-            const { data: ad } = await supabase
-                .from("ads")
-                .select("*")
-                .eq("id", id)
-                .maybeSingle();
-
-            if (!ad) {
-                return res.status(404).json({ error: "Anúncio não encontrado" });
-            }
-
-            if (ad.user_id !== user.id) {
-                return res.status(403).json({ error: "Sem permissão" });
-            }
-
-            const updates = { status };
-
-            if (status === "inactive") {
-                const refundAmount = Number(ad.remaining || 0);
-
-                if (refundAmount > 0) {
-                    await supabase
-                        .from("users")
-                        .update({ balance: (user.balance || 0) + refundAmount })
-                        .eq("id", user.id);
-
-                    await supabase
-                        .from("transactions")
-                        .insert([{
-                            user_id: user.id,
-                            amount: refundAmount,
-                            type: "refund",
-                            reference_id: ad.id,
-                            description: `Reembolso do anúncio: ${ad.title}`
-                        }]);
-
-                    updates.remaining = 0;
-                }
-            }
-
-            await supabase
-                .from("ads")
-                .update(updates)
-                .eq("id", id);
 
             return res.json({ success: true });
         }

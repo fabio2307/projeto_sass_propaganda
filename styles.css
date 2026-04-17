@@ -98,6 +98,68 @@ textarea {
     font-size: 16px; /* evita zoom no iOS */
   }
 
+  .topbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .topbar h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .card p {
+    font-size: 20px;
+  }
+
+  .charts-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .chart-card {
+    padding: 15px;
+  }
+
+  .ads-table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  th, td {
+    padding: 8px 4px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
   table {
     font-size: 12px;
   }
