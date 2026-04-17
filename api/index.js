@@ -4,6 +4,30 @@ import Stripe from "stripe";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { Resend } from 'resend';
+import {
+    sanitize,
+    validateAdInput,
+    resetDailyIfNeeded,
+    isAdEligible,
+    calculateAdScore,
+    checkRateLimitDB
+} from '../lib/adsService.js';
+import {
+    validateCredentials,
+    hashPassword,
+    verifyPassword,
+    generateToken,
+    getUserFromToken
+} from '../lib/authService.js';
+import {
+    createStripeCheckout
+} from '../lib/paymentsService.js';
+import {
+    auditLog,
+    getCache,
+    setCache,
+    checkRateLimit
+} from '../lib/utils.js';
 
 const baseUrl = process.env.BASE_URL || "https://projeto-sass-propaganda.vercel.app";
 
@@ -28,98 +52,7 @@ function getSupabase() {
     );
 }
 
-// 🔥 sanitização básica contra XSS
-function sanitize(str) {
-    return String(str).replace(/[<>]/g, "");
-}
 
-// 🔥 validação rigorosa para fintech
-function validateInput(input, type) {
-    if (!input) return false;
-
-    switch (type) {
-        case 'email':
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            return emailRegex.test(String(input));
-        case 'password':
-            return String(input).length >= 8;
-        case 'name':
-            return String(input).length >= 2 && String(input).length <= 100;
-        case 'url':
-            try {
-                new URL(input);
-                return true;
-            } catch {
-                return false;
-            }
-        case 'number':
-            const num = Number(input);
-            return !isNaN(num) && num >= 0;
-        default:
-            return String(input).length > 0;
-    }
-}
-
-// 🔥 log de auditoria para operações sensíveis
-function auditLog(action, userId, details) {
-    console.log(`AUDIT [${new Date().toISOString()}] ${action} - User: ${userId} - ${JSON.stringify(details)}`);
-}
-
-// 🔥 cache simples para escalabilidade (em produção usar Redis)
-const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-
-function getCache(key) {
-    const item = cache.get(key);
-    if (item && Date.now() - item.timestamp < CACHE_TTL) {
-        return item.data;
-    }
-    cache.delete(key);
-    return null;
-}
-
-function setCache(key, data) {
-    cache.set(key, { data, timestamp: Date.now() });
-}
-
-// 🔥 util
-function isAdEligible(ad) {
-    if (ad.status !== "active") return false;
-
-    if ((ad.remaining || 0) <= 0) return false;
-
-    if (ad.daily_budget > 0 && ad.daily_spent >= ad.daily_budget) return false;
-
-    return true;
-}
-
-const clicks = new Map();
-
-function checkRateLimit(ip) {
-    const now = Date.now();
-
-    if (!clicks.has(ip)) {
-        clicks.set(ip, []);
-    }
-
-    const history = clicks.get(ip);
-
-    // 🔥 remove registros antigos (30s)
-    const filtered = history.filter(t => now - t < 30000);
-
-    // 🔥 adiciona novo clique
-    filtered.push(now);
-
-    // 🔥 limita tamanho (evita leak de memória)
-    if (filtered.length > 20) {
-        filtered.shift();
-    }
-
-    clicks.set(ip, filtered);
-
-    // 🔥 limite: 5 cliques em 30s
-    return filtered.length <= 5;
-}
 
 export const config = {
     api: { bodyParser: true },
@@ -588,6 +521,16 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: "Não autorizado" });
             }
 
+            // 🔥 verificar limite de anúncios por plano
+            const maxAds = user.plan === 'PRO' ? 100 : 5;
+            const { count } = await supabase
+                .from("ads")
+                .select('*', { count: 'exact', head: true })
+                .eq("user_id", user.id);
+            if (count >= maxAds) {
+                return res.status(400).json({ error: `Limite de ${maxAds} anúncios atingido para seu plano` });
+            }
+
             const { title, description, link, bid, budget } = body;
 
             // 🔥 normaliza bid
@@ -601,16 +544,20 @@ export default async function handler(req, res) {
             );
 
             // 🔥 validações
-            if (!title || !link || isNaN(bidNumber) || bidNumber <= 0) {
-                return res.status(400).json({
-                    error: "Dados inválidos",
-                    debug: { title, link, bid }
-                });
+            if (!title || title.length < 3 || title.length > 255) {
+                return res.status(400).json({ error: "Título deve ter entre 3 e 255 caracteres" });
             }
-
-            // 🔥 valida orçamento
-            if (isNaN(budgetNumber) || budgetNumber <= 0) {
-                return res.status(400).json({ error: "Orçamento inválido" });
+            if (!description || description.length < 10 || description.length > 255) {
+                return res.status(400).json({ error: "Descrição deve ter entre 10 e 255 caracteres" });
+            }
+            if (!link) {
+                return res.status(400).json({ error: "Link é obrigatório" });
+            }
+            if (isNaN(bidNumber) || bidNumber < 1) {
+                return res.status(400).json({ error: "Bid deve ser pelo menos 1" });
+            }
+            if (isNaN(budgetNumber) || budgetNumber < bidNumber) {
+                return res.status(400).json({ error: "Orçamento deve ser pelo menos igual ao bid" });
             }
 
             // 🔥 valida saldo para orçamento com consistência forte
@@ -698,7 +645,8 @@ export default async function handler(req, res) {
                     daily_spent: 0,
                     clicks: 0,
                     views: 0,
-                    status: "active"
+                    status: "active",
+                    is_featured: false
                 }]);
 
             if (error) {
@@ -759,16 +707,12 @@ export default async function handler(req, res) {
                     const ageHours = ad.created_at
                         ? Math.max((Date.now() - new Date(ad.created_at)) / 3600000, 0)
                         : 0;
-                    const recency = Math.max(0, 1 - ageHours / 72);
-                    const remainingFactor = Math.min((ad.remaining || 0) / Math.max(ad.budget || 1, 1), 1);
-                    const repetitionPenalty = Math.min((ad.views || 0) / 100, 0.25);
+                    const novidade = Math.max(0, 1 - ageHours / 24); // bônus para anúncios < 24h
 
                     const score =
                         (ad.bid || 0) * 0.6 +
-                        (ctr * 100) * 0.2 +
-                        recency * 10 * 0.1 +
-                        remainingFactor * 10 * 0.1 -
-                        repetitionPenalty;
+                        (ctr * 100) * 0.3 +
+                        novidade * 0.1;
 
                     return {
                         ...ad,
@@ -868,7 +812,8 @@ export default async function handler(req, res) {
                     user_id: ad.user_id,
                     amount: -cost,
                     type: "click",
-                    ad_id: ad.id
+                    reference_id: ad.id,
+                    description: `Clique no anúncio: ${ad.title}`
                 }] );
 
             return res.json({ success: true });
@@ -900,7 +845,7 @@ export default async function handler(req, res) {
         //
         async function checkRateLimitDB(supabase, ip, adId) {
             try {
-                const from = new Date(Date.now() - 60000).toISOString();
+                const from = new Date(Date.now() - 5000).toISOString();
 
                 const { data, error } = await supabase
                     .from("click_logs")
@@ -916,8 +861,8 @@ export default async function handler(req, res) {
 
                 const total = data ? data.length : 0;
 
-                // 🔥 limite: 30 cliques em 60s por IP/ad
-                return total < 30;
+                // 🔥 limite: 1 clique em 5s por IP/ad
+                return total < 1;
 
             } catch (err) {
                 console.error("Erro inesperado rate limit:", err);
@@ -1033,7 +978,8 @@ export default async function handler(req, res) {
                             user_id: user.id,
                             amount: refundAmount,
                             type: "refund",
-                            ad_id: ad.id
+                            reference_id: ad.id,
+                            description: `Reembolso do anúncio: ${ad.title}`
                         }]);
 
                     updates.remaining = 0;
@@ -1086,14 +1032,18 @@ export default async function handler(req, res) {
             const totalSpent = spentData?.reduce((acc, t) => acc + Math.abs(t.amount), 0) || 0;
 
             const totalClicks = ads?.reduce((acc, ad) => acc + (ad.clicks || 0), 0) || 0;
+            const totalViews = ads?.reduce((acc, ad) => acc + (ad.views || 0), 0) || 0;
             const totalAds = ads?.length || 0;
+            const ctr = totalViews > 0 ? (totalClicks / totalViews) * 100 : 0;
             const cpc = totalClicks > 0 ? totalSpent / totalClicks : 0;
 
             const result = {
                 balance: userData?.balance || 0,
                 totalSpent,
                 totalClicks,
+                totalViews,
                 totalAds,
+                ctr,
                 cpc,
                 ads
             };
@@ -1126,6 +1076,17 @@ export default async function handler(req, res) {
 
     } catch (err) {
         console.error("🔥 ERRO REAL:", err);
+
+        // 🔥 log de erro na tabela
+        try {
+            await supabase.from("errors").insert({
+                message: err.message,
+                stack: err.stack,
+                created_at: new Date().toISOString()
+            });
+        } catch (logErr) {
+            console.error("Erro ao logar erro:", logErr);
+        }
 
         return res.status(500).json({
             error: "Erro interno",

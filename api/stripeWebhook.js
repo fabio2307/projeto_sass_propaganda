@@ -89,8 +89,8 @@ export default async function handler(req, res) {
             user_id: userId,
             amount: amount,
             type: "deposit",
-            status: "completed",
-            stripe_session: sessionId
+            reference_id: sessionId,
+            description: `Depósito via Stripe: R$ ${amount.toFixed(2)}`
         });
     }
 

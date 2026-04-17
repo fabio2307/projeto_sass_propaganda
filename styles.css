@@ -77,11 +77,39 @@ textarea {
   padding: 0;
 }
 
-/* ================= MELHORIA VISUAL ================= */
+/* ================= RESPONSIVIDADE MOBILE ================= */
 
-input:focus,
-textarea:focus {
-  transform: translateY(-1px);
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .center-box {
+    width: 100%;
+    margin: 40px auto;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  input, textarea {
+    font-size: 16px; /* evita zoom no iOS */
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px 4px;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 12px;
+  }
 }
 
 body {
