@@ -6,6 +6,12 @@
 
   if (!container) return;
 
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function createAdElement(ad) {
     const el = document.createElement('div');
     el.style.cursor = 'pointer';
@@ -16,8 +22,8 @@
     el.style.background = '#fff';
 
     el.innerHTML = `
-      <strong style="display:block; margin-bottom:6px; font-size:1rem; color:#111;">${ad.title}</strong>
-      <p style="margin:0; color:#555; font-size:0.95rem; line-height:1.4;">${ad.description}</p>
+      <strong style="display:block; margin-bottom:6px; font-size:1rem; color:#111;">${escapeHTML(ad.title)}</strong>
+      <p style="margin:0; color:#555; font-size:0.95rem; line-height:1.4;">${escapeHTML(ad.description)}</p>
     `;
 
     el.addEventListener('click', function () {

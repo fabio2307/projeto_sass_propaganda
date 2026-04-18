@@ -24,6 +24,12 @@
     <script>
         const API = "/api";
 
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         function showToast(message) {
             let container = document.getElementById("toastContainer");
 
@@ -65,12 +71,9 @@
                 const res = await fetch(`${API}?action=listAds`);
                 const data = await res.json();
 
-                console.log("API resposta:", data);
-
                 if (!Array.isArray(data)) {
                     document.getElementById("ads").innerHTML =
                         "<p>Erro ao carregar anúncios</p>";
-                    console.error("Erro da API:", data);
                     return;
                 }
 
@@ -101,11 +104,11 @@
                 return `
                 <div class="ad-card">
 
-                    <h3>${ad.title}</h3>
+                    <h3>${escapeHTML(ad.title)}</h3>
 
-                    <p>${ad.description || "Sem descrição"}</p>
+                    <p>${escapeHTML(ad.description || "Sem descrição")}</p>
 
-                    <a href="${ad.link}" target="_blank"
+                    <a href="${escapeHTML(ad.link)}" target="_blank"
                        onclick="registrarClick('${ad.id}')">
                         🔗 Ver oferta
                     </a>

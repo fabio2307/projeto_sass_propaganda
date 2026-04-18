@@ -72,7 +72,6 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (existing) {
-            console.log("Pagamento já processado");
             return res.json({ received: true });
         }
 

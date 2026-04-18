@@ -74,6 +74,12 @@
     <script>
         const API = "/api";
 
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
         function formatMoney(value) {
             return Number(value || 0).toLocaleString("pt-BR", {
                 style: "currency",
@@ -150,7 +156,7 @@
                             const cpc = ad.clicks > 0 ? (ad.spent / ad.clicks).toFixed(2) : 0;
                             return `
                                 <tr>
-                                    <td>${ad.title}</td>
+                                    <td>${escapeHTML(ad.title)}</td>
                                     <td><span class="status-${ad.status}">${ad.status}</span></td>
                                     <td>${ad.views || 0}</td>
                                     <td>${ad.clicks || 0}</td>

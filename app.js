@@ -1,5 +1,12 @@
 const API = "/api";
 
+// ================= ESCAPE HTML =================
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 // ================= SAFE JSON =================
 async function safeJson(res) {
     const text = await res.text();
@@ -9,7 +16,6 @@ async function safeJson(res) {
     try {
         data = JSON.parse(text);
     } catch {
-        console.error("RESPOSTA NÃO JSON:", text);
         throw new Error("Erro inesperado do servidor");
     }
 
@@ -477,7 +483,6 @@ async function registrarClick(adId) {
         const key = `clicked_${adId}`;
 
         if (sessionStorage.getItem(key)) {
-            console.log("Clique já registrado nesta sessão");
             return;
         }
 
@@ -513,7 +518,6 @@ async function registrarClick(adId) {
 
         // ⏳ bloqueio de clique repetido (1 por minuto)
         if (lastClick && now - lastClick < 60000) {
-            console.log("Aguarde antes de clicar novamente");
             return;
         }
 
@@ -549,8 +553,6 @@ async function criarAd() {
         const link = document.getElementById("link").value;
         const bid = parseMoney(document.getElementById("bid").value);
         const budget = parseMoney(document.getElementById("budget").value);
-
-        console.log("ENVIANDO:", { title, description, link, bid, budget }); // 🔥 DEBUG
 
         // Validações específicas e detalhadas
         if (!title) {
@@ -606,8 +608,6 @@ async function criarAd() {
         });
 
         const data = await res.json();
-
-        console.log("RESPOSTA BACK:", data); // 🔥 ESSENCIAL
 
         if (!res.ok) {
             throw new Error(data.error || "Erro ao criar anúncio");
@@ -818,11 +818,8 @@ async function init() {
 
     // 🔒 se não estiver logado, não faz nada
     if (!token) {
-        console.log("❌ Usuário não logado");
         return;
     }
-
-    console.log("✅ Usuário autenticado");
 
     // esconder login (se existir)
     const loginBox = document.getElementById("loginBox");

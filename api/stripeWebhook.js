@@ -33,7 +33,6 @@ export default async function handler(req, res) {
             process.env.STRIPE_WEBHOOK_SECRET
         );
     } catch (err) {
-        console.error("WEBHOOK ERROR:", err.message);
         return res.status(400).send("Erro webhook");
     }
 
@@ -64,7 +63,6 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (existing) {
-            console.log("Pagamento já processado");
             return res.json({ received: true });
         }
 
