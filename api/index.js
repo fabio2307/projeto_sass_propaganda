@@ -457,13 +457,18 @@ export default async function handler(req, res) {
 
             const { title, description, link, bid, budget } = body;
 
-            const result = await createAd(supabase, user, { title, description, link, bid, budget });
+            try {
+                const result = await createAd(supabase, user, { title, description, link, bid, budget });
 
-            if (!result.success) {
-                return res.status(400).json({ error: result.error });
+                if (!result.success) {
+                    return res.status(400).json({ error: result.error });
+                }
+
+                return res.json({ success: true });
+            } catch (error) {
+                console.error('Erro ao criar anúncio:', error);
+                return res.status(500).json({ error: 'Erro interno do servidor' });
             }
-
-            return res.json({ success: true });
         }
 
         // ================= MY ADS =================
