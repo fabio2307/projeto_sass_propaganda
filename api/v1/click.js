@@ -35,7 +35,6 @@ export default async function handler(req, res) {
 
     return await handleExternalClick({ req, res, apiKey });
   } catch (error) {
-    console.error('API /api/v1/click error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

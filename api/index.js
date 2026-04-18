@@ -91,10 +91,8 @@ export default async function handler(req, res) {
 
     if (missingEnvs.length > 0) {
         const msg = `Variáveis de ambiente faltando: ${missingEnvs.join(", ")}`;
-        console.error("❌", msg);
         return res.status(500).json({
-            error: "Configuração incompleta",
-            missing: missingEnvs
+            error: "Configuração incompleta"
         });
     }
 
@@ -650,7 +648,6 @@ export default async function handler(req, res) {
                     .gte("created_at", from);
 
                 if (error) {
-                    console.error("Erro rate limit:", error);
                     return true; // 🔥 não bloqueia em caso de erro
                 }
 
@@ -660,7 +657,6 @@ export default async function handler(req, res) {
                 return total < 1;
 
             } catch (err) {
-                console.error("Erro inesperado rate limit:", err);
                 return true;
             }
         }
@@ -782,7 +778,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Ação inválida" });
 
     } catch (err) {
-        console.error("🔥 ERRO REAL:", err);
 
         // 🔥 log de erro na tabela
         try {
@@ -792,12 +787,11 @@ export default async function handler(req, res) {
                 created_at: new Date().toISOString()
             });
         } catch (logErr) {
-            console.error("Erro ao logar erro:", logErr);
+            // Silent fail for logging
         }
 
         return res.status(500).json({
-            error: "Erro interno",
-            detalhe: err.message // 👈 ajuda MUITO
+            error: "Erro interno"
         });
     }
 }

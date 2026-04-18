@@ -58,6 +58,6 @@
       });
     })
     .catch(function (error) {
-      console.error('ads.js failed to load ads:', error);
+      // Silent fail
     });
 })();
