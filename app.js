@@ -155,13 +155,16 @@ async function register() {
 
         const data = await safeJson(res);
 
+        if (!res.ok) {
+            throw new Error(data.error || "Erro ao criar conta");
+        }
+
         showToast("Conta criada! Verifique seu email antes de entrar 📩", "success");
 
         limparCamposCadastro();
         showLogin();
 
     } catch (err) {
-        console.error(err);
         showToast("Erro: " + err.message, "error");
     } finally {
         if (btn) {
@@ -306,7 +309,6 @@ async function login() {
 
         } else {
             showToast("Erro no login: " + err.message, "error");
-            console.error("❌ Login error:", err.message);
         }
 
     } finally {
@@ -510,7 +512,6 @@ async function registrarClick(adId) {
 
         if (data?.error) {
             showToast(data.error, "error");
-            console.error("Erro da API:", data.error);
         }
 
         const lastClick = localStorage.getItem(key);
@@ -524,7 +525,7 @@ async function registrarClick(adId) {
         localStorage.setItem(key, now);
 
     } catch (err) {
-        console.error("Erro ao registrar clique", err);
+        showToast("Erro ao registrar clique", "error");
     }
 }
 
@@ -625,7 +626,6 @@ async function criarAd() {
         await carregarSaldo(); // Atualizar saldo em tempo real
 
     } catch (err) {
-        console.error("ERRO:", err);
         showToast(err.message, "error");
     } finally {
         if (btn) {
@@ -837,7 +837,7 @@ async function init() {
         await carregarSaldo();
         await carregarAds();
     } catch (err) {
-        console.error("Erro ao iniciar:", err);
+        showToast("Erro ao iniciar o dashboard", "error");
     }
 
     // 🔥 retorno de pagamento
@@ -880,7 +880,7 @@ async function toggleAd(adId, status) {
         }
 
     } catch (err) {
-        console.error(err);
+        showToast("Ocorreu um erro inesperado", "error");
     }
 }
 
