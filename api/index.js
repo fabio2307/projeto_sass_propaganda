@@ -20,6 +20,8 @@ import {
 import {
     registerUser,
     loginUser,
+    requestPasswordReset,
+    resetPassword,
     getUserFromToken,
     getUserData
 } from '../lib/auth.js';
@@ -428,6 +430,152 @@ export default async function handler(req, res) {
 </div>
         `
             });
+
+            return res.json({ ok: true });
+        }
+
+        // ================= FORGOT PASSWORD =================
+        if (action === "forgotPassword") {
+            const { email } = body;
+
+            if (!email) {
+                return res.status(400).json({ error: "Email é obrigatório" });
+            }
+
+            const result = await requestPasswordReset(supabase, email);
+
+            if (!result.success) {
+                return res.status(400).json({ error: result.error });
+            }
+
+            if (!result.resetToken) {
+                return res.json({ ok: true });
+            }
+
+            if (!resend) {
+                return res.status(500).json({ error: "Resend não configurado" });
+            }
+
+            await resend.emails.send({
+                from: 'onboarding@resend.dev',
+                to: email,
+                subject: 'Recuperação de senha',
+                html: `
+            <div style="font-family: Arial, sans-serif; background:#0f172a; padding:40px; text-align:center; color:#e2e8f0;">
+    
+    <div style="max-width:500px; margin:auto; background:#020617; padding:30px; border-radius:12px; border:1px solid #1e293b;">
+        
+        <h2 style="margin-bottom:10px;">🔐 Recuperação de senha</h2>
+        
+        <p style="color:#94a3b8; font-size:14px;">
+            Clique no botão abaixo para redefinir sua senha.
+        </p>
+
+        <a href="${baseUrl}/api?action=resetPassword&token=${result.resetToken}"
+           style="
+                display:inline-block;
+                margin-top:20px;
+                padding:12px 25px;
+                background:#3b82f6;
+                color:#fff;
+                text-decoration:none;
+                border-radius:8px;
+                font-weight:bold;
+           ">
+            🔄 Redefinir senha
+        </a>
+
+        <p style="margin-top:25px; font-size:12px; color:#64748b;">
+            Se o botão não funcionar, copie e cole este link no navegador:
+        </p>
+
+        <p style="word-break:break-all; font-size:12px; color:#38bdf8;">
+            ${baseUrl}/api?action=resetPassword&token=${result.resetToken}
+        </p>
+
+        <hr style="margin:25px 0; border-color:#1e293b;">
+
+        <p style="font-size:11px; color:#475569;">
+            Se você não solicitou a redefinição de senha, ignore este email.
+        </p>
+
+    </div>
+
+</div>
+        `
+            });
+
+            return res.json({ ok: true });
+        }
+
+        // ================= RESET PASSWORD =================
+        if (action === "resetPassword") {
+            if (req.method === "GET") {
+                const { token } = req.query;
+                if (!token) {
+                    return res.status(400).send("Token inválido ou expirado");
+                }
+
+                return res.send(`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Redefinir senha</title>
+<style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    .card { background: #020617; padding: 30px; border-radius: 12px; border: 1px solid #1e293b; width: 90%; max-width: 420px; }
+    input, button { width: 100%; padding: 12px; margin-top: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; }
+    button { background: #3b82f6; border: none; cursor: pointer; font-weight: bold; }
+    .note { color: #94a3b8; font-size: 13px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>Redefinir senha</h1>
+    <p class="note">Digite sua nova senha abaixo.</p>
+    <form id="resetForm">
+        <input type="password" id="password" placeholder="Nova senha" required />
+        <input type="hidden" id="token" value="${token}" />
+        <button type="submit">Salvar nova senha</button>
+    </form>
+    <p class="note" id="message"></p>
+</div>
+<script>
+    const form = document.getElementById('resetForm');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const password = document.getElementById('password').value;
+        const token = document.getElementById('token').value;
+        const response = await fetch('/api?action=resetPassword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, password })
+        });
+        const result = await response.json();
+        const message = document.getElementById('message');
+        if (!response.ok) {
+            message.textContent = result.error || 'Erro ao redefinir senha';
+            return;
+        }
+        message.textContent = 'Senha redefinida com sucesso! Você já pode fazer login.';
+        setTimeout(() => { window.location.href = '/'; }, 2500);
+    });
+</script>
+</body>
+</html>
+                `);
+            }
+
+            const { token, password } = body;
+            if (!token || !password) {
+                return res.status(400).json({ error: "Token e senha são obrigatórios" });
+            }
+
+            const result = await resetPassword(supabase, token, password);
+            if (!result.success) {
+                return res.status(400).json({ error: result.error });
+            }
 
             return res.json({ ok: true });
         }
