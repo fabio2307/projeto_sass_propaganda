@@ -1,15 +1,16 @@
 // ================= TOGGLE SENHA =================
-function togglePasswordVisibility(inputId) {
+function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
-    const button = event.target.closest('.toggle-password');
 
-    if (input.type === "password") {
-        input.type = "text";
-        button.classList.add("active");
-    } else {
-        input.type = "password";
-        button.classList.remove("active");
-    }
+    if (!input) return;
+
+    const isHidden = input.type === "password";
+
+    // alterna tipo
+    input.type = isHidden ? "text" : "password";
+
+    // alterna classe (pra CSS se quiser)
+    button.classList.toggle("active", isHidden);
 }
 
 // ================= ESCAPE HTML =================
@@ -711,7 +712,7 @@ function setupRealTimeValidation() {
     const budgetInput = document.getElementById("budget");
 
     if (titleInput) {
-        titleInput.addEventListener("input", function() {
+        titleInput.addEventListener("input", function () {
             const length = this.value.length;
             const counter = this.parentElement.querySelector("small");
             if (counter) {
@@ -722,7 +723,7 @@ function setupRealTimeValidation() {
     }
 
     if (descriptionInput) {
-        descriptionInput.addEventListener("input", function() {
+        descriptionInput.addEventListener("input", function () {
             const length = this.value.length;
             const counter = this.parentElement.querySelector("small");
             if (counter) {
@@ -733,7 +734,7 @@ function setupRealTimeValidation() {
     }
 
     if (linkInput) {
-        linkInput.addEventListener("input", function() {
+        linkInput.addEventListener("input", function () {
             const isValid = this.value.startsWith("https://") || this.value.startsWith("http://");
             this.style.borderColor = isValid ? "#10b981" : this.value ? "#f59e0b" : "#1e293b";
         });
@@ -741,7 +742,7 @@ function setupRealTimeValidation() {
 }
 
 // Chamar quando o DOM estiver pronto
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     setupRealTimeValidation();
 });
 

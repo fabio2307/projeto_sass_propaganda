@@ -13,49 +13,59 @@ textarea {
 /* ================= PASSWORD CONTAINER ================= */
 .password-container {
   position: relative;
-  display: flex;
-  align-items: center;
-  margin-bottom: 18px;
+  width: 100%;
 }
 
+/* input ocupa tudo */
 .password-container input {
-  flex: 1;
-  margin: 0;
+  width: 100%;
+  padding-right: 45px;
 }
 
+/* botão do olho */
 .password-container .toggle-password {
   position: absolute;
+  top: 50%;
   right: 12px;
+  transform: translateY(-50%);
+  /* 🔥 CORREÇÃO PRINCIPAL */
+
   background: none;
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  padding: 4px;
+
   width: 32px;
   height: 32px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
-  transition: color 0.2s ease;
+
+  z-index: 2;
+  transition: all 0.2s ease;
 }
 
+/* hover */
 .password-container .toggle-password:hover {
   color: #e2e8f0;
+  transform: translateY(-50%) scale(1.1);
 }
 
+/* ativo (quando mostra senha) */
 .password-container .toggle-password.active {
   color: #3b82f6;
 }
 
+/* ícone */
 .password-container .eye-icon {
   width: 18px;
   height: 18px;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  pointer-events: none;
+  /* 🔥 evita bug de clique no SVG */
 }
 
-/* textarea precisa ser diferente */
+/* textarea separado */
 textarea {
   height: auto;
   min-height: 100px;
@@ -139,8 +149,10 @@ textarea {
     gap: 15px;
   }
 
-  input, textarea {
-    font-size: 16px; /* evita zoom no iOS */
+  input,
+  textarea {
+    font-size: 16px;
+    /* evita zoom no iOS */
   }
 
   .topbar {
@@ -195,7 +207,8 @@ textarea {
     min-width: 600px;
   }
 
-  th, td {
+  th,
+  td {
     padding: 8px 4px;
   }
 
@@ -863,6 +876,43 @@ body {
 
 #formRegister button:active {
   transform: translateY(0);
+}
+
+/* Botão "mostrar senha" não pode herdar o estilo do submit (#formRegister button) */
+#formRegister .password-container .toggle-password {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  margin: 0;
+  margin-top: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: #94a3b8;
+  font-size: 0;
+  line-height: 0;
+}
+
+#formRegister .password-container .toggle-password:hover {
+  background: none;
+  box-shadow: none;
+  color: #e2e8f0;
+  transform: translateY(-50%) scale(1.1);
+}
+
+#formRegister .password-container .toggle-password:active {
+  transform: translateY(-50%);
+  box-shadow: none;
+}
+
+#formRegister .password-container .toggle-password.active {
+  color: #3b82f6;
+}
+
+#formRegister .password-container input {
+  padding-right: 48px;
 }
 
 /* IDADE (visual mais suave) */

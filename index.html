@@ -17,7 +17,8 @@
         <input id="loginEmail" placeholder="Email">
         <div class="password-container">
             <input id="loginPassword" type="password" placeholder="Senha">
-            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword')">
+
+            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
                 <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -27,21 +28,30 @@
 
         <button id="btnLogin">Entrar</button>
 
-        <p class="link" onclick="if(window.showForgotPasswordForm) window.showForgotPasswordForm(); else alert('Carregando...')">Esqueci minha senha</p>
+        <p class="link"
+            onclick="if(window.showForgotPasswordForm) window.showForgotPasswordForm(); else alert('Carregando...')">
+            Esqueci minha senha</p>
 
         <div id="forgotPasswordBox" class="hidden" style="margin-top: 16px;">
             <p>Digite seu email para receber o link de redefinição de senha.</p>
-            <input id="forgotPasswordEmail" type="email" placeholder="Email" style="margin-bottom: 10px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;" />
-            <button onclick="if(window.forgotPassword) window.forgotPassword(); else alert('Carregando...')" style="width: 100%; margin-top: 8px;">Enviar link de recuperação</button>
-            <p class="link" onclick="if(window.hideForgotPasswordForm) window.hideForgotPasswordForm(); else alert('Carregando...')">Voltar ao login</p>
+            <input id="forgotPasswordEmail" type="email" placeholder="Email"
+                style="margin-bottom: 10px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;" />
+            <button onclick="if(window.forgotPassword) window.forgotPassword(); else alert('Carregando...')"
+                style="width: 100%; margin-top: 8px;">Enviar link de recuperação</button>
+            <p class="link"
+                onclick="if(window.hideForgotPasswordForm) window.hideForgotPasswordForm(); else alert('Carregando...')">
+                Voltar ao login</p>
         </div>
 
         <p id="resendBox" class="resend hidden">
             Não recebeu o email?
-            <span id="resendBtn" onclick="if(window.resendVerification) window.resendVerification(); else alert('Carregando...')">Reenviar verificação</span>
+            <span id="resendBtn"
+                onclick="if(window.resendVerification) window.resendVerification(); else alert('Carregando...')">Reenviar
+                verificação</span>
         </p>
 
-        <p onclick="if(window.showRegister) window.showRegister(); else alert('Carregando...')" class="link">Criar conta</p>
+        <p onclick="if(window.showRegister) window.showRegister(); else alert('Carregando...')" class="link">Criar conta
+        </p>
     </div>
     <div class="center-box hidden" id="registerBox">
         <h2>Cadastro</h2>
@@ -66,8 +76,9 @@
 
             <div class="form-group">
                 <div class="password-container">
-                    <input id="registerPassword" type="password" placeholder="Senha" required>
-                    <button type="button" class="toggle-password" onclick="togglePasswordVisibility('registerPassword')">
+                    <input id="registerPassword" type="password" placeholder="Senha">
+                    <button type="button" class="toggle-password"
+                        onclick="togglePasswordVisibility('registerPassword', this)">
                         <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
@@ -80,7 +91,9 @@
 
         </form>
 
-        <p onclick="if(window.showLogin) window.showLogin(); else alert('Carregando...')" class="link">Já tenho conta</p>
+        <p onclick="if(window.showLogin) window.showLogin(); else alert('Carregando...')" class="link">
+            Já tenho conta
+        </p>
     </div>
 
     <!-- DASHBOARD -->
@@ -145,7 +158,8 @@
 
                     <div class="form-group full-width">
                         <label for="description">Descrição *</label>
-                        <textarea id="description" placeholder="Descreva os benefícios e características do produto..." rows="3" maxlength="500"></textarea>
+                        <textarea id="description" placeholder="Descreva os benefícios e características do produto..."
+                            rows="3" maxlength="500"></textarea>
                         <small>Mínimo 10 caracteres, máximo 500</small>
                     </div>
 
@@ -163,7 +177,8 @@
 
                     <div class="form-group">
                         <label for="budget">Orçamento Total *</label>
-                        <input id="budget" type="text" placeholder="R$ 0,00" oninput="formatMoneyInput(this)" onblur="validateBudget(this)">
+                        <input id="budget" type="text" placeholder="R$ 0,00" oninput="formatMoneyInput(this)"
+                            onblur="validateBudget(this)">
                         <small>Mínimo R$ 5,00</small>
                     </div>
                 </div>
@@ -172,12 +187,14 @@
                     <div class="info-item">
                         <span class="info-icon">💡</span>
                         <div>
-                            <strong>Dica:</strong> Lance competitivo aumenta visibilidade, mas orçamento controla gastos totais.
+                            <strong>Dica:</strong> Lance competitivo aumenta visibilidade, mas orçamento controla gastos
+                            totais.
                         </div>
                     </div>
                 </div>
 
-                <button class="create-ad-btn" onclick="if(window.criarAd) window.criarAd(); else alert('Carregando...')">
+                <button class="create-ad-btn"
+                    onclick="if(window.criarAd) window.criarAd(); else alert('Carregando...')">
                     <span class="btn-icon">🚀</span>
                     Criar Anúncio
                 </button>
@@ -189,7 +206,9 @@
             <!-- TRANSAÇÕES -->
             <div class="transactions-section">
                 <h3>Histórico de Transações</h3>
-                <button onclick="if(window.carregarTransacoes) window.carregarTransacoes(); else alert('Carregando...')">Carregar Transações</button>
+                <button
+                    onclick="if(window.carregarTransacoes) window.carregarTransacoes(); else alert('Carregando...')">Carregar
+                    Transações</button>
                 <div id="transactions"></div>
             </div>
 
