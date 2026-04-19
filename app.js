@@ -233,6 +233,57 @@ function limparCamposCadastro() {
 }
 
 // ================= LOGIN =================
+function showForgotPasswordForm() {
+    document.getElementById("forgotPasswordBox").classList.remove("hidden");
+    document.getElementById("loginBox").scrollIntoView({ behavior: "smooth" });
+}
+
+function hideForgotPasswordForm() {
+    document.getElementById("forgotPasswordBox").classList.add("hidden");
+}
+
+async function forgotPassword() {
+    const email = document.getElementById("forgotPasswordEmail").value.trim();
+
+    if (!email || !email.includes("@")) {
+        showToast("Digite um email válido", "error");
+        return;
+    }
+
+    const btn = document.querySelector("#forgotPasswordBox button");
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Enviando...";
+    }
+
+    try {
+        const res = await fetch(`${API}?action=forgotPassword`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email })
+        });
+
+        const data = await safeJson(res);
+
+        if (!res.ok) {
+            throw new Error(data.error || "Erro ao enviar link");
+        }
+
+        showToast("Link de recuperação enviado! Verifique seu email.", "success");
+        document.getElementById("forgotPasswordEmail").value = "";
+        hideForgotPasswordForm();
+    } catch (err) {
+        showToast("Erro: " + err.message, "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Enviar link de recuperação";
+        }
+    }
+}
+
 async function login() {
     const email = document.getElementById("loginEmail").value.trim();
     const password = document.getElementById("loginPassword").value;

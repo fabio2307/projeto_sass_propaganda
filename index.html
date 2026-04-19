@@ -19,6 +19,15 @@
 
         <button id="btnLogin">Entrar</button>
 
+        <p class="link" onclick="if(window.showForgotPasswordForm) window.showForgotPasswordForm(); else alert('Carregando...')">Esqueci minha senha</p>
+
+        <div id="forgotPasswordBox" class="hidden" style="margin-top: 16px;">
+            <p>Digite seu email para receber o link de redefinição de senha.</p>
+            <input id="forgotPasswordEmail" type="email" placeholder="Email" style="margin-bottom: 10px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;" />
+            <button onclick="if(window.forgotPassword) window.forgotPassword(); else alert('Carregando...')" style="width: 100%; margin-top: 8px;">Enviar link de recuperação</button>
+            <p class="link" onclick="if(window.hideForgotPasswordForm) window.hideForgotPasswordForm(); else alert('Carregando...')">Voltar ao login</p>
+        </div>
+
         <p id="resendBox" class="resend hidden">
             Não recebeu o email?
             <span id="resendBtn" onclick="if(window.resendVerification) window.resendVerification(); else alert('Carregando...')">Reenviar verificação</span>
