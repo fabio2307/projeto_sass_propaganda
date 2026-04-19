@@ -1,14 +1,14 @@
 // ================= TOGGLE SENHA =================
 function togglePasswordVisibility(inputId) {
     const input = document.getElementById(inputId);
-    const button = event.target;
+    const button = event.target.closest('.toggle-password');
 
     if (input.type === "password") {
         input.type = "text";
-        button.textContent = "🙈";
+        button.classList.add("active");
     } else {
         input.type = "password";
-        button.textContent = "👁️";
+        button.classList.remove("active");
     }
 }
 
