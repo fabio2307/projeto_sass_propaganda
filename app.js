@@ -1,4 +1,16 @@
-const API = "/api";
+// ================= TOGGLE SENHA =================
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    const button = event.target;
+
+    if (input.type === "password") {
+        input.type = "text";
+        button.textContent = "🙈";
+    } else {
+        input.type = "password";
+        button.textContent = "👁️";
+    }
+}
 
 // ================= ESCAPE HTML =================
 function escapeHTML(str) {
@@ -334,6 +346,10 @@ async function login() {
 
         localStorage.setItem("token", data.token);
         localStorage.setItem("userId", data.user.id);
+
+        // Limpar campos de login
+        document.getElementById("loginEmail").value = "";
+        document.getElementById("loginPassword").value = "";
 
         document.getElementById("loginBox").classList.add("hidden");
         document.getElementById("dashboard").classList.remove("hidden");

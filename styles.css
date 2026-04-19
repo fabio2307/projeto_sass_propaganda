@@ -10,6 +10,40 @@ textarea {
   box-sizing: border-box;
 }
 
+/* ================= PASSWORD CONTAINER ================= */
+.password-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.password-container input {
+  flex: 1;
+  margin: 0;
+}
+
+.password-container .toggle-password {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0;
+  width: auto;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.password-container .toggle-password:hover {
+  opacity: 0.8;
+}
+
 /* textarea precisa ser diferente */
 textarea {
   height: auto;
