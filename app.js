@@ -1,3 +1,6 @@
+/** Base das rotas do backend (mesmo padrão de dashboard.html / ads.html). */
+const API = "/api";
+
 // ================= TOGGLE SENHA =================
 function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
