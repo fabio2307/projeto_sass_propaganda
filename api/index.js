@@ -471,7 +471,7 @@ export default async function handler(req, res) {
             Clique no botão abaixo para redefinir sua senha.
         </p>
 
-        <a href="${baseUrl}/api?action=resetPassword&token=${result.resetToken}"
+        <a href="${baseUrl}/reset-password.html?token=${result.resetToken}"
            style="
                 display:inline-block;
                 margin-top:20px;
@@ -490,7 +490,7 @@ export default async function handler(req, res) {
         </p>
 
         <p style="word-break:break-all; font-size:12px; color:#38bdf8;">
-            ${baseUrl}/api?action=resetPassword&token=${result.resetToken}
+            ${baseUrl}/reset-password.html?token=${result.resetToken}
         </p>
 
         <hr style="margin:25px 0; border-color:#1e293b;">
