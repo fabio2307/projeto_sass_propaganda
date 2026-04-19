@@ -14,9 +14,10 @@
     <div class="center-box" id="loginBox">
         <h2>Login</h2>
 
-        <input id="loginEmail" placeholder="Email">
+        <input id="loginEmail" type="email" name="login_email" autocomplete="username" placeholder="Email">
         <div class="password-container">
-            <input id="loginPassword" type="password" placeholder="Senha">
+            <input id="loginPassword" type="password" name="login_password" autocomplete="current-password"
+                placeholder="Senha">
 
             <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
                 <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -34,7 +35,7 @@
 
         <div id="forgotPasswordBox" class="hidden" style="margin-top: 16px;">
             <p>Digite seu email para receber o link de redefinição de senha.</p>
-            <input id="forgotPasswordEmail" type="email" placeholder="Email"
+            <input id="forgotPasswordEmail" type="email" name="recovery_email" autocomplete="email" placeholder="Email"
                 style="margin-bottom: 10px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0;" />
             <button onclick="if(window.forgotPassword) window.forgotPassword(); else alert('Carregando...')"
                 style="width: 100%; margin-top: 8px;">Enviar link de recuperação</button>
@@ -59,11 +60,13 @@
         <form id="formRegister" onsubmit="event.preventDefault(); register();">
 
             <div class="form-group">
-                <input id="registerName" type="text" placeholder="Nome" required>
+                <input id="registerName" type="text" name="registration_fullname" autocomplete="name" placeholder="Nome"
+                    required>
             </div>
 
             <div class="form-group">
-                <input id="registerBirth" type="date" required onchange="calcularIdade()">
+                <input id="registerBirth" type="date" name="registration_birth" autocomplete="bday" required
+                    onchange="calcularIdade()">
             </div>
 
             <div class="form-group">
@@ -71,12 +74,14 @@
             </div>
 
             <div class="form-group">
-                <input id="registerEmail" type="email" placeholder="Email" required>
+                <input id="registerEmail" type="email" name="registration_email" autocomplete="email" placeholder="Email"
+                    required>
             </div>
 
             <div class="form-group">
                 <div class="password-container">
-                    <input id="registerPassword" type="password" placeholder="Senha">
+                    <input id="registerPassword" type="password" name="new_password" autocomplete="new-password"
+                        placeholder="Senha">
                     <button type="button" class="toggle-password"
                         onclick="togglePasswordVisibility('registerPassword', this)">
                         <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

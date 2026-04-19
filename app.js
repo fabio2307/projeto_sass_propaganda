@@ -126,6 +126,38 @@ function showLogin() {
     document.getElementById("loginBox").classList.remove("hidden");
 }
 
+/** Limpa senha de cadastro e o estado do “olho” (evita autofill indevido em formulário oculto). */
+function resetRegisterPasswordField() {
+    const input = document.getElementById("registerPassword");
+    if (!input) return;
+    input.value = "";
+    input.type = "password";
+    const toggle = input.closest(".password-container")?.querySelector(".toggle-password");
+    if (toggle) toggle.classList.remove("active");
+}
+
+/** Gestores de senha às vezes preenchem campos ocultos depois do DOM; reforça o campo vazio no cadastro. */
+function stripStaleRegisterPasswordAutofill() {
+    const run = () => resetRegisterPasswordField();
+    run();
+    requestAnimationFrame(run);
+    setTimeout(run, 50);
+    setTimeout(run, 300);
+    setTimeout(run, 1000);
+}
+
+/** Evita autofill “fantasma” no login até o usuário interagir com o campo de senha. */
+function shieldLoginPasswordFromStaleAutofill() {
+    const el = document.getElementById("loginPassword");
+    if (!el) return;
+    el.setAttribute("readonly", "readonly");
+    const unlock = () => {
+        el.removeAttribute("readonly");
+    };
+    el.addEventListener("focus", unlock, { once: true });
+    el.addEventListener("pointerdown", unlock, { once: true });
+}
+
 // ================= REGISTER =================
 async function register() {
     const name = document.getElementById("registerName").value.trim();
@@ -146,7 +178,7 @@ async function register() {
         return;
     }
 
-    const btn = document.querySelector("#registerBox button");
+    const btn = document.querySelector("#formRegister button[type='submit']");
     if (btn) {
         btn.disabled = true;
         btn.innerText = "Criando conta...";
@@ -182,7 +214,7 @@ async function register() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = "Criar conta";
+            btn.innerText = "Cadastrar";
         }
     }
 }
@@ -977,6 +1009,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     init(); // 🔥 chama aqui dentro
+
+    stripStaleRegisterPasswordAutofill();
+    shieldLoginPasswordFromStaleAutofill();
+});
+
+window.addEventListener("load", () => {
+    stripStaleRegisterPasswordAutofill();
 });
 
 
