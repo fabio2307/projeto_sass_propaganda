@@ -8,7 +8,7 @@
 - **Rollback automático**: Em caso de erro, saldo é restaurado
 
 ### 🛡️ Proteções Anti-Abuso
-- **Rate limiting**: 5 cliques/30s por IP, 1 clique/5s por anúncio
+- **Rate limiting**: 5 cliques/30s por IP (API), 1 clique/10s por IP e anúncio (anti-fraude em clique)
 - **Validação de URL**: Apenas HTTP/HTTPS permitidos
 - **Sanitização**: Proteção contra XSS em títulos e descrições
 
@@ -19,8 +19,9 @@
 
 ### 🎯 Funcionalidades
 - **Filtros**: Busca por título, filtro por status
-- **Planos**: Limitação por plano (Free: 5 anúncios, PRO: 100)
-- **Destaque**: Anúncios featured (apenas PRO)
+- **Planos**: FREE (até 3 anúncios), PRO (até 20), PREMIUM (ilimitado + destaque)
+- **Destaque**: `is_featured` apenas no plano PREMIUM
+- **Upgrade de plano**: Stripe Checkout (`createPlanCheckout`) + webhook atualiza `users.plan`
 - **API pública**: Endpoints REST para integração externa
 - **Script embutível**: Plug-and-play para qualquer site
 
@@ -37,15 +38,23 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JWT_SECRET=your_jwt_secret
 STRIPE_SECRET_KEY=your_stripe_key
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRO_PLAN_BRL=29.90
+STRIPE_PREMIUM_PLAN_BRL=79.90
 RESEND_API_KEY=your_resend_key
 BASE_URL=https://yourdomain.com
 API_KEYS_REQUIRED=false  # true para exigir API keys
 ```
 
-### 2. Executar SQL
+No Stripe Dashboard, configure o webhook **POST** para `https://SEU_DOMINIO/api/stripeWebhook` com o evento `checkout.session.completed`.
+
+### 2. Executar SQL (ordem)
 ```bash
-psql -d your_database < database/improvements.sql
+psql "$DATABASE_URL" -f database/improvements.sql
+psql "$DATABASE_URL" -f database/production_close.sql
 ```
+
+O arquivo `database/production_close.sql` aplica: `search_path` seguro nas funções, políticas RLS (sem `USING (true)` em logs), tabela `errors`, alias `update_ad_score` e bloqueio de cliente direto em `click_logs` / `errors`.
 
 ### 3. Deploy
 ```bash
@@ -72,7 +81,8 @@ npm run build
 ### Autenticação
 - `POST /api?action=register` - Registrar usuário
 - `POST /api?action=login` - Fazer login
-- `POST /api?action=createCheckout` - Criar pagamento Stripe
+- `POST /api?action=createCheckout` - Criar pagamento Stripe (saldo)
+- `POST /api?action=createPlanCheckout` - Checkout upgrade de plano (`body: { "plan": "pro" | "premium" }`)
 
 ## 🎨 Script Embutível
 

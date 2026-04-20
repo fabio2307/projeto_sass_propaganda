@@ -26,7 +26,8 @@ import {
     getUserData
 } from '../lib/auth.js';
 import {
-    createStripeCheckout
+    createStripeCheckout,
+    createPlanCheckout
 } from '../lib/payments.js';
 import {
     auditLog,
@@ -654,23 +655,10 @@ export default async function handler(req, res) {
 
             // 🔥 depois faz ranking com recência, orçamento e novidade
             const rankedAds = validAds
-                .map(ad => {
-                    const ctr = ad.views > 0 ? (ad.clicks / ad.views) : 0;
-                    const ageHours = ad.created_at
-                        ? Math.max((Date.now() - new Date(ad.created_at)) / 3600000, 0)
-                        : 0;
-                    const novidade = Math.max(0, 1 - ageHours / 24); // bônus para anúncios < 24h
-
-                    const score =
-                        (ad.bid || 0) * 0.6 +
-                        (ctr * 100) * 0.3 +
-                        novidade * 0.1;
-
-                    return {
-                        ...ad,
-                        score
-                    };
-                })
+                .map(ad => ({
+                    ...ad,
+                    score: calculateAdScore(ad)
+                }))
                 .sort((a, b) => b.score - a.score);
 
             return res.json(rankedAds);
@@ -788,32 +776,6 @@ export default async function handler(req, res) {
             return res.json({ ok: true });
         }
 
-        //
-        async function checkRateLimitDB(supabase, ip, adId) {
-            try {
-                const from = new Date(Date.now() - 5000).toISOString();
-
-                const { data, error } = await supabase
-                    .from("click_logs")
-                    .select("id")
-                    .eq("ip", ip)
-                    .eq("ad_id", adId)
-                    .gte("created_at", from);
-
-                if (error) {
-                    return true; // 🔥 não bloqueia em caso de erro
-                }
-
-                const total = data ? data.length : 0;
-
-                // 🔥 limite: 1 clique em 5s por IP/ad
-                return total < 1;
-
-            } catch (err) {
-                return true;
-            }
-        }
-
         // ================= CHECKOUT =================
         if (action === "createCheckout") {
 
@@ -828,6 +790,30 @@ export default async function handler(req, res) {
             const result = await createStripeCheckout(user.id, amount);
 
             return res.json({ url: result.url });
+        }
+
+        // ================= CHECKOUT PLANO (Stripe) =================
+        if (action === "createPlanCheckout") {
+
+            const user = await getUserFromToken(extractToken(req));
+
+            if (!user) {
+                return res.status(401).json({ error: "Não autorizado" });
+            }
+
+            const { plan } = body;
+            const p = String(plan || "").toLowerCase();
+
+            if (!["pro", "premium"].includes(p)) {
+                return res.status(400).json({ error: "Plano inválido (use pro ou premium)" });
+            }
+
+            try {
+                const result = await createPlanCheckout(user.id, p);
+                return res.json({ url: result.url });
+            } catch (e) {
+                return res.status(400).json({ error: e.message || "Erro ao criar checkout" });
+            }
         }
 
         // ================= TOGGLE (CORRIGIDO) =================

@@ -455,8 +455,55 @@ async function carregarSaldo() {
 
         document.getElementById("saldo").innerText = formatMoney(data.balance || 0);
 
+        const planEl = document.getElementById("userPlan");
+        const p = String(data.plan || "free").toLowerCase();
+        if (planEl) {
+            planEl.textContent = p.toUpperCase();
+        }
+
+        const proBtn = document.querySelector(".btn-plan.pro");
+        const premBtn = document.querySelector(".btn-plan.premium");
+        if (proBtn) {
+            proBtn.style.display = p === "free" ? "inline-flex" : "none";
+        }
+        if (premBtn) {
+            premBtn.style.display = (p === "free" || p === "pro") ? "inline-flex" : "none";
+        }
+
     } catch (err) {
         showToast(err.message, "error");
+    }
+}
+
+// ================= UPGRADE DE PLANO (Stripe) =================
+async function checkoutPlan(plan) {
+    try {
+        const token = getToken();
+        if (!token) {
+            showToast("Faça login novamente", "error");
+            return;
+        }
+
+        const res = await fetch(`${API}?action=createPlanCheckout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ plan })
+        });
+
+        const data = await safeJson(res);
+        if (!res.ok) {
+            throw new Error(data.error || "Não foi possível iniciar o pagamento");
+        }
+        if (data.url) {
+            window.location.href = data.url;
+            return;
+        }
+        throw new Error("Resposta inválida do servidor");
+    } catch (err) {
+        showToast(err.message || "Erro ao abrir checkout", "error");
     }
 }
 
@@ -943,9 +990,15 @@ async function init() {
         showToast("Erro ao iniciar o dashboard", "error");
     }
 
-    // 🔥 retorno de pagamento
-    if (window.location.search.includes("success")) {
+    // 🔥 retorno de pagamento (saldo)
+    if (window.location.search.includes("success") && !window.location.search.includes("plan_success")) {
         showToast("Pagamento aprovado!", "success");
+        await carregarSaldo();
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (window.location.search.includes("plan_success")) {
+        showToast("Plano atualizado! Obrigado.", "success");
         await carregarSaldo();
         window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -956,7 +1009,7 @@ async function toggleAd(adId, status) {
     try {
         const token = localStorage.getItem("token"); // 👈 IMPORTANTE
 
-        const res = await fetch(`/api?action=toggleAd`, {
+        const res = await fetch(`${API}?action=toggleAd`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -1035,3 +1088,4 @@ window.resendVerification = resendVerification;
 window.carregarTransacoes = carregarTransacoes;
 window.formatMoneyInput = formatMoneyInput;
 window.validateBudget = validateBudget;
+window.checkoutPlan = checkoutPlan;

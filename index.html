@@ -114,9 +114,16 @@
             </div>
         </div>
 
-        <!-- SALDO -->
+        <!-- SALDO + PLANO -->
         <div class="saldo-box">
             <h3>💰 Saldo: R$ <span id="saldo">0</span></h3>
+            <p class="plan-line">Plano atual: <strong id="userPlan">FREE</strong>
+                <span class="plan-hint" title="FREE: até 3 anúncios | PRO: até 20 | PREMIUM: ilimitado + destaque">ⓘ</span>
+            </p>
+            <div class="plan-actions">
+                <button type="button" class="btn-plan pro" onclick="if(window.checkoutPlan) checkoutPlan('pro'); else alert('Carregando...')">Upgrade PRO</button>
+                <button type="button" class="btn-plan premium" onclick="if(window.checkoutPlan) checkoutPlan('premium'); else alert('Carregando...')">Upgrade PREMIUM</button>
+            </div>
 
             <input type="text" id="valor" placeholder="R$ 0,00">
             <button onclick="if(window.pagar) window.pagar(); else alert('Carregando...')">Adicionar saldo</button>

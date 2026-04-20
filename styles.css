@@ -1137,12 +1137,50 @@ button {
   margin: 20px;
   border-radius: 12px;
   border: 1px solid #1e293b;
-  max-width: 300px;
+  max-width: 340px;
 
   display: flex;
   flex-direction: column;
   gap: 12px;
   /* 🔥 resolve o espaçamento */
+}
+
+.saldo-box .plan-line {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.saldo-box .plan-hint {
+  cursor: help;
+  margin-left: 4px;
+  color: #64748b;
+}
+
+.saldo-box .plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saldo-box .btn-plan {
+  flex: 1;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.saldo-box .btn-plan.pro {
+  background: linear-gradient(135deg, #6366f1, #4338ca);
+}
+
+.saldo-box .btn-plan.premium {
+  background: linear-gradient(135deg, #f59e0b, #b45309);
 }
 
 /* 🔥 Reenviar verificação */
