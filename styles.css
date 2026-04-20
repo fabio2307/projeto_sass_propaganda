@@ -1158,21 +1158,31 @@ button {
 }
 
 .saldo-box .plan-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
 }
 
 .saldo-box .btn-plan {
-  flex: 1;
-  min-width: 120px;
-  padding: 10px 12px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  height: 46px;
+  padding: 0 12px;
+  margin: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
   color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .saldo-box .btn-plan.pro {

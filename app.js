@@ -1,6 +1,9 @@
 /** Base das rotas do backend (mesmo padrão de dashboard.html / ads.html). */
 const API = "/api";
 
+/** Saldo atual (atualizado em carregarSaldo) — usado para validar orçamento do anúncio no front. */
+let cachedUserBalance = null;
+
 // ================= TOGGLE SENHA =================
 function togglePasswordVisibility(inputId, button) {
     const input = document.getElementById(inputId);
@@ -113,6 +116,7 @@ function showToast(message, type = "info") {
 
 // ================= LOGOUT =================
 function logout() {
+    cachedUserBalance = null;
     localStorage.clear();
     window.location.href = "/index.html";
 }
@@ -453,7 +457,10 @@ async function carregarSaldo() {
 
         const data = await safeJson(res);
 
-        document.getElementById("saldo").innerText = formatMoney(data.balance || 0);
+        const bal = Number(data.balance ?? 0);
+        cachedUserBalance = Number.isFinite(bal) ? bal : 0;
+
+        document.getElementById("saldo").innerText = formatMoney(cachedUserBalance);
 
         const planEl = document.getElementById("userPlan");
         const p = String(data.plan || "free").toLowerCase();
@@ -749,6 +756,16 @@ async function criarAd() {
             throw new Error("Orçamento mínimo é R$ 5,00");
         }
 
+        if (bid > budget) {
+            throw new Error("O orçamento total deve ser maior ou igual ao lance por clique.");
+        }
+
+        if (cachedUserBalance !== null && budget > cachedUserBalance) {
+            throw new Error(
+                `Orçamento (${formatMoney(budget)}) não pode ser maior que seu saldo disponível (${formatMoney(cachedUserBalance)}). Adicione saldo ou reduza o orçamento.`
+            );
+        }
+
         const res = await fetch(`${API}?action=createAd`, {
             method: "POST",
             headers: {
@@ -956,10 +973,19 @@ function validateBudget(input) {
         showToast(`Orçamento mínimo: R$ ${minBudget.toFixed(2).replace(".", ",")}`, "warning");
         input.style.borderColor = "#f59e0b";
         return false;
-    } else {
-        input.style.borderColor = "#1e293b";
-        return true;
     }
+
+    if (cachedUserBalance !== null && value > 0 && value > cachedUserBalance) {
+        showToast(
+            `Orçamento (${formatMoney(value)}) não pode ser maior que o saldo (${formatMoney(cachedUserBalance)}).`,
+            "warning"
+        );
+        input.style.borderColor = "#f59e0b";
+        return false;
+    }
+
+    input.style.borderColor = "#1e293b";
+    return true;
 }
 
 // ================= INICIALIZAÇÃO =================
